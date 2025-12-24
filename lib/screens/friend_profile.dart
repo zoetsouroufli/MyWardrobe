@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/back_button.dart';
 
 class FriendProfileScreen extends StatelessWidget {
   const FriendProfileScreen({super.key});
@@ -12,51 +13,26 @@ class FriendProfileScreen extends StatelessWidget {
           children: [
             // Custom Header
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.black),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ),
-                  ),
-                  Image.asset(
-                    'assets/logo.png', // Reusing the main logo or app_logo based on preference. design shows similar logo.
-                    // The user asked to use the new logo sent.
-                    // Let's use the new one: assets/app_logo.png
-                    // But wait, the previous logo was assets/logo.png.
-                    // I'll use assets/app_logo.png as requested.
-                    width: 150,
-                    fit: BoxFit.contain,
-                  ),
-                  // Workaround: if app_logo.png is the one with "My wardrobe", use that.
-                  // To be safe I'll use 'assets/app_logo.png'
-                ],
-              ),
-            ),
-            // Just incase the stack alignment is off, let's adjust.
-            // Actually, the logo is centered in the design.
-            Center(
-              child: Image.asset(
-                'assets/app_logo.png',
-                height: 50,
-                fit: BoxFit.contain,
-              ),
-            ),
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16.0,
+    vertical: 8.0,
+  ),
+  child: Stack(
+    alignment: Alignment.center,
+    children: [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: BackButtonCircle(),
+      ),
+      Image.asset(
+        'assets/MyWardrobe.png',
+        width: 150,
+        fit: BoxFit.contain,
+      ),
+    ],
+  ),
+),
+
 
             const SizedBox(height: 20),
 
