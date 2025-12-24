@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/friend_profile.dart';
+import 'screens/friend_outfit.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MyWardrobe',
-    home: const FriendProfileScreen(),
+    home: const FriendProfileOutfit(),
      
       
     );
