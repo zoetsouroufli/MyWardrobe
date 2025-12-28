@@ -7,6 +7,8 @@ import 'screens/my_outfits.dart';
 import 'screens/edit_profile.dart';
 import 'screens/one_outfit.dart';
 import 'screens/clothing_categories.dart';
+import 'screens/selected_category.dart';
+import 'screens/selected_clothing_item.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,7 +22,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MyWardrobe',
-    home: const ClothingCategoriesScreen(),
+    home:  SelectedClothingItemScreen(
+  imagePath: 'assets/pants5.png',
+)
+
+,
      
       
     );
