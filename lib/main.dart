@@ -13,8 +13,14 @@ import 'screens/selected_clothing_item.dart';
 import 'screens/add_to_outfit.dart';
 import 'screens/add_new_outfit.dart';
 import 'screens/stats.dart';
+import 'screens/camera_screen.dart';
 
-void main() {
+import 'package:camera/camera.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
