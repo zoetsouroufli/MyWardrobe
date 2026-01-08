@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 
-class FriendProfileOutfit extends StatelessWidget {
-  const FriendProfileOutfit({super.key});
+class FriendOutfitScreen extends StatelessWidget {
+  const FriendOutfitScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

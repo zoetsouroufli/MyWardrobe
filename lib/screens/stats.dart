@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../widgets/bottom_nav.dart';
-import '../widgets/stat_card.dart';
-import '../widgets/least_most_card.dart';
-import '../widgets/donut_chart_placeholder.dart';
-import '../widgets/bar_chart_placeholder.dart';
+import '../widgets/clothing_type_pie.dart';
+import '../widgets/barchart.dart';
+import '../widgets/least_most_column.dart';
+import '../widgets/info_bars.dart';
+import '../widgets/MonthlySpendingChart.dart';
+
 
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
@@ -18,89 +20,51 @@ class StatsScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
+              const SizedBox(height: 8),
+              const Text('stats', style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 12),
-
-              const Text(
-                'stats',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-
-              const SizedBox(height: 16),
-
-              Image.asset('assets/MyWardrobe.png', height: 48),
-
+              Image.asset('assets/MyWardrobe.png', height: 46),
               const SizedBox(height: 24),
 
-              // ===== TOP SECTION =====
+              /// PIE + RIGHT CARDS
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Expanded(child: DonutChartPlaceholder()),
+                children:  [
+                  Expanded(flex: 3, child: ClothingTypePie()),
                   SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        LeastMostCard(
-                          title: 'Least worn',
-                          item: 'Shirt',
-                          times: 2,
-                          imagePath: 'assets/shirt.png',
-                        ),
-                        SizedBox(height: 16),
-                        LeastMostCard(
-                          title: 'Most worn',
-                          item: 'Trousers',
-                          times: 20,
-                          imagePath: 'assets/pants.png',
-                        ),
-                      ],
-                    ),
-                  ),
+                  Expanded(flex: 2, child: LeastMostColumn()),
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // ===== MIDDLE =====
-              Row(
-                children: const [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Average spent',
-                      value: '100\$ / month',
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Total items',
-                      value: '30',
-                      big: true,
-                    ),
-                  ),
-                ],
+              /// INFO BARS
+              const InfoBar(
+                title: 'Favourite colour',
+                value: 'Black',
+                valueColor: Colors.black,
+              ),
+              const SizedBox(height: 12),
+              const InfoBar(
+                title: 'Total Wardrobe Value',
+                value: '2000€',
+                valueColor: Colors.purple,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              const StatCard(
-                title: 'Total wardrobe value',
-                value: '1500\$',
-                icon: Icons.circle,
-              ),
+              /// LINE CHART
+              const MonthlySpendChart(),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              const StatCard(title: 'Clothes by colour', icon: Icons.palette),
+              /// BAR CHART
+              const ClothesByColorBarChart(),
 
-              const SizedBox(height: 16),
-
-              const BarChartPlaceholder(),
-
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
             ],
           ),
         ),
