@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class BottomNav extends StatelessWidget {
   final int selectedIndex;
+  final Function(int) onTap;
 
-  const BottomNav({super.key, required this.selectedIndex});
+  const BottomNav({
+    super.key,
+    required this.selectedIndex,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +31,18 @@ class BottomNav extends StatelessWidget {
   }
 
   Widget _icon(IconData icon, int index) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: selectedIndex == index ? Colors.purple.shade100 : Colors.transparent,
-        shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: () => onTap(index),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selectedIndex == index
+              ? Colors.purple.shade100
+              : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.black),
       ),
-      child: Icon(icon, color: Colors.black),
     );
   }
 }

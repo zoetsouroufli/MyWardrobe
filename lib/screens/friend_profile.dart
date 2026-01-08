@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
+import 'friend_outfit.dart';
 
 class FriendProfileScreen extends StatelessWidget {
-  const FriendProfileScreen({super.key});
+  final String friendName;
+  final String friendUsername;
+  final String friendPhoto;
+
+  const FriendProfileScreen({
+    super.key,
+    this.friendName = 'babis heotis',
+    this.friendUsername = 'fashion-icon',
+    this.friendPhoto = 'assets/friend4.jpg',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -11,28 +21,31 @@ class FriendProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header
+            // Header with back button and logo
             Padding(
-  padding: const EdgeInsets.symmetric(
-    horizontal: 16.0,
-    vertical: 8.0,
-  ),
-  child: Stack(
-    alignment: Alignment.center,
-    children: [
-      Align(
-        alignment: Alignment.centerLeft,
-        child: BackButtonCircle(),
-      ),
-      Image.asset(
-        'assets/MyWardrobe.png',
-        width: 150,
-        fit: BoxFit.contain,
-      ),
-    ],
-  ),
-),
-
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: BackButtonCircle(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                  Image.asset(
+                    'assets/MyWardrobe.png',
+                    width: 150,
+                    fit: BoxFit.contain,
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 20),
 
@@ -43,31 +56,29 @@ class FriendProfileScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(50),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Colors.grey.shade300, width: 2),
               ),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 30,
-                    backgroundImage: NetworkImage(
-                      'https://placehold.co/100x100.png',
-                    ), // Placeholder
+                    backgroundImage: AssetImage(friendPhoto),
                     backgroundColor: Colors.grey,
                   ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'babis heotis',
-                        style: TextStyle(
+                      Text(
+                        friendName,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
                       Text(
-                        'fashion-icon',
+                        friendUsername,
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
@@ -78,7 +89,7 @@ class FriendProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Grid
+            // Outfit Grid
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -101,7 +112,7 @@ class FriendProfileScreen extends StatelessWidget {
                     initialLikes: 10,
                   ),
                   OutfitCard(
-                    color: Color(0xFF7CB342), // Greenish
+                    color: Color(0xFF7CB342),
                     title: 'party tzous',
                     description: 'May 15th get ready idea',
                     initialLikes: 12,
@@ -159,90 +170,117 @@ class _OutfitCardState extends State<OutfitCard> {
         _likes--;
       }
     });
+    print('Like toggled: $_isLiked, Likes: $_likes');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3E5F5), // Light purple background
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.deepPurpleAccent),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image / Color Block
-          Expanded(
-            flex: 3,
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              color: widget.color,
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  // Heart Icon
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _toggleLike,
-                      child: Container(
-                        color: Colors.transparent, // Hit test area
-                        padding: const EdgeInsets.all(4),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: _isLiked
-                                  ? Colors.black
-                                  : Colors.black, // Design shows black outline
-                              size: 24,
-                            ),
-                            Text(
-                              '$_likes',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
+    return GestureDetector(
+      onTap: () {
+        print('Outfit card tapped: ${widget.title}');
+
+        // Navigate to Friend Outfit for "go thrifting"
+        if (widget.title == 'go thrifting') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const FriendProfileOutfit(),
+            ),
+          );
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF9C27B0), width: 2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Colored block for outfit image
+            Expanded(
+              flex: 3,
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    // Like button
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: _toggleLike,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: Colors.black,
+                                size: 24,
+                              ),
+                              Text(
+                                '$_likes',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Text
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+            // Text section
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 8.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

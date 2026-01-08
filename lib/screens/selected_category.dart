@@ -5,10 +5,7 @@ import '../widgets/outfit_item.dart';
 class SelectedCategoryScreen extends StatelessWidget {
   final String categoryTitle;
 
-  const SelectedCategoryScreen({
-    super.key,
-    required this.categoryTitle,
-  });
+  const SelectedCategoryScreen({super.key, required this.categoryTitle});
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +19,7 @@ class SelectedCategoryScreen extends StatelessWidget {
             // ===== TITLE =====
             Text(
               categoryTitle.toLowerCase(),
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 18, color: Colors.grey),
             ),
 
             const SizedBox(height: 16),
@@ -49,10 +43,7 @@ class SelectedCategoryScreen extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: BackButtonCircle(),
                         ),
-                        Image.asset(
-                          'assets/MyWardrobe.png',
-                          height: 48,
-                        ),
+                        Image.asset('assets/MyWardrobe.png', height: 48),
                       ],
                     ),
 
@@ -66,12 +57,12 @@ class SelectedCategoryScreen extends StatelessWidget {
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
                       children: [
-                        OutfitItem('assets/pants1.png'),
-                        OutfitItem('assets/pants2.png'),
-                        OutfitItem('assets/pants3.png'),
-                        OutfitItem('assets/pants4.png'),
-                        OutfitItem('assets/pants5.png'),
-                        OutfitItem('assets/pants6.png'),
+                        OutfitItem('assets/pants.png'),
+                        OutfitItem('assets/pants.png'),
+                        OutfitItem('assets/pants.png'),
+                        OutfitItem('assets/pants.png'),
+                        OutfitItem('assets/pants.png'),
+                        OutfitItem('assets/pants.png'),
                       ],
                     ),
                   ],
