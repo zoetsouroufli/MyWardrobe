@@ -22,14 +22,8 @@ class OutfitView extends StatelessWidget {
         Stack(
           alignment: Alignment.center,
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: BackButtonCircle(),
-            ),
-            Image.asset(
-              'assets/MyWardrobe.png',
-              height: 48,
-            ),
+            Align(alignment: Alignment.centerLeft, child: BackButtonCircle()),
+            Image.asset('assets/MyWardrobe.png', height: 48),
             if (isOwner)
               Align(
                 alignment: Alignment.centerRight,
@@ -50,10 +44,10 @@ class OutfitView extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          children:  [
+          children: [
             OutfitItem('assets/shorts.png'),
             OutfitItem('assets/sweater.png'),
-            OutfitItem('assets/jacket.png'),
+            OutfitItem('assets/clothing_jacket_green.jpg'),
             OutfitItem('assets/socks.png'),
             OutfitItem('assets/shoes.png'),
           ],
@@ -61,23 +55,19 @@ class OutfitView extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-          Divider(
-                  thickness: 1.5,
-                  height: 24,
-                  color: Colors.deepPurpleAccent.withOpacity(0.5),
-                ),
+        Divider(
+          thickness: 1.5,
+          height: 24,
+          color: Colors.deepPurpleAccent.withOpacity(0.5),
+        ),
 
-            const SizedBox(height: 8),
-
+        const SizedBox(height: 8),
 
         if (showAddSection) ...[
           const SizedBox(height: 16),
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              'Add',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: Text('Add', style: TextStyle(color: Colors.grey)),
           ),
           const SizedBox(height: 8),
 
@@ -88,7 +78,7 @@ class OutfitView extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
-            children:[
+            children: [
               OutfitItem('assets/add1.png'),
               OutfitItem('assets/add2.png'),
               OutfitItem('assets/add3.png'),

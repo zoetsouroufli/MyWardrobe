@@ -12,7 +12,10 @@ class StatsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F5),
-      bottomNavigationBar: const BottomNav(selectedIndex: 1),
+      bottomNavigationBar: BottomNav(
+        selectedIndex: 1,
+        onTap: (index) => print('Bottom nav tapped: $index'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -27,10 +30,7 @@ class StatsScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              Image.asset(
-                'assets/MyWardrobe.png',
-                height: 48,
-              ),
+              Image.asset('assets/MyWardrobe.png', height: 48),
 
               const SizedBox(height: 24),
 
@@ -94,10 +94,7 @@ class StatsScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              const StatCard(
-                title: 'Clothes by colour',
-                icon: Icons.palette,
-              ),
+              const StatCard(title: 'Clothes by colour', icon: Icons.palette),
 
               const SizedBox(height: 16),
 

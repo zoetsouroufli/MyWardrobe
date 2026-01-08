@@ -10,7 +10,10 @@ class ClothingCategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F5),
-      bottomNavigationBar: const BottomNav(selectedIndex: 3),
+      bottomNavigationBar: BottomNav(
+        selectedIndex: 3,
+        onTap: (index) => print('Bottom nav tapped: $index'),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -36,10 +39,7 @@ class ClothingCategoriesScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     // Logo
-                    Image.asset(
-                      'assets/MyWardrobe.png',
-                      height: 48,
-                    ),
+                    Image.asset('assets/MyWardrobe.png', height: 48),
 
                     const SizedBox(height: 20),
 
