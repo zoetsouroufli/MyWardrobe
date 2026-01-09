@@ -2,6 +2,35 @@ import 'package:flutter/material.dart';
 import '../widgets/bottom_nav.dart';
 import 'edit_profile.dart';
 import 'one_outfit.dart';
+import 'home_screen.dart';
+import 'stats.dart';
+import 'clothing_categories.dart';
+
+// Global variable to share outfits data across screens
+List<Map<String, dynamic>> globalOutfits = [
+  {
+    'color': const Color(0xFFD01FE8),
+    'title': 'outfit to go for coffee',
+    'subtitle': 'maybe with red socks it would work better',
+    'likes': 14,
+    'items': [],
+  },
+  {
+    'color': const Color(0xFFFF9800),
+    'title': 'outfit to go to latraac',
+    'subtitle': 'its May and the weather is nice',
+    'likes': 12,
+    'isLink': true,
+    'items': [],
+  },
+  {
+    'color': const Color(0xFF1A1A80),
+    'title': 'monday morning fit',
+    'subtitle': 'coolcoolcoolcoolcool',
+    'likes': 10,
+    'items': [],
+  },
+];
 
 class MyOutfitsScreen extends StatefulWidget {
   const MyOutfitsScreen({super.key});
@@ -11,28 +40,7 @@ class MyOutfitsScreen extends StatefulWidget {
 }
 
 class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
-  // List of outfits to manage state
-  final List<Map<String, dynamic>> outfits = [
-    {
-      'color': const Color(0xFFD01FE8),
-      'title': 'outfit to go for coffee',
-      'subtitle': 'maybe with red socks it would work better',
-      'likes': 14,
-    },
-    {
-      'color': const Color(0xFFFF9800),
-      'title': 'outfit to go to latraac',
-      'subtitle': 'its May and the weather is nice',
-      'likes': 12,
-      'isLink': true, // Identifier for the linked outfit
-    },
-    {
-      'color': const Color(0xFF1A1A80),
-      'title': 'monday morning fit',
-      'subtitle': 'coolcoolcoolcoolcool',
-      'likes': 10,
-    },
-  ];
+  // Use globalOutfits instead of local list
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +49,28 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
       bottomNavigationBar: BottomNav(
         selectedIndex: 2,
         onTap: (index) {
-          print('Bottom nav tapped: $index');
+          if (index == 2) return;
+          Widget screen;
+          switch (index) {
+            case 0:
+              screen = const HomeScreen();
+              break;
+            case 1:
+              screen = const StatsScreen();
+              break;
+            case 3:
+              screen = const ClothingCategoriesScreen();
+              break;
+            default:
+              return;
+          }
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => screen,
+              transitionDuration: Duration.zero,
+            ),
+          );
         },
       ),
       body: SafeArea(
@@ -158,11 +187,11 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: outfits.length,
+                  itemCount: globalOutfits.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final outfit = outfits[index];
+                    final outfit = globalOutfits[index];
 
                     return _OutfitCard(
                       color: outfit['color'],
@@ -176,14 +205,15 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const OneOutfitScreen(),
+                              builder: (context) =>
+                                  OneOutfitScreen(outfitIndex: index),
                             ),
                           );
 
                           // Check if deleted
                           if (result == 'deleted') {
                             setState(() {
-                              outfits.removeAt(index);
+                              globalOutfits.removeAt(index);
                             });
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Outfit deleted')),

@@ -1,39 +1,63 @@
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
+import 'my_outfits.dart'; // Import globalOutfits
 
 class OneOutfitScreen extends StatefulWidget {
-  const OneOutfitScreen({super.key});
+  final int outfitIndex; // Accept index to access shared data
+
+  const OneOutfitScreen({super.key, required this.outfitIndex});
 
   @override
   State<OneOutfitScreen> createState() => _OneOutfitScreenState();
 }
 
 class _OneOutfitScreenState extends State<OneOutfitScreen> {
-  // Initial current items
-  final List<String> currentItems = [
-    'assets/zoe-shorts.png',
-    'assets/zoe-stripespullover.png',
-    'assets/zoe-jeanjacket.png',
-    'assets/zoe-socks.png',
-    'assets/zoe-ballerinas.png',
-  ];
-
-  // Initial suggested items
+  // Initial suggestions (keep hardcoded for now or fetch from somewhere else)
   final List<String> suggestedItems = [
     'assets/zoe-vshirt.png',
     'assets/zoe-poukamiso.png',
     'assets/zoe-hat.png',
   ];
 
+  List<String> get currentItems {
+    // Safely access items from global list
+    if (widget.outfitIndex < globalOutfits.length) {
+      final items = globalOutfits[widget.outfitIndex]['items'];
+      if (items is List) {
+        return List<String>.from(items);
+      }
+    }
+    return [];
+  }
+
   void _moveItemToOutfit(String itemPath) {
     setState(() {
       suggestedItems.remove(itemPath);
-      currentItems.add(itemPath);
+      // Update global list
+      if (widget.outfitIndex < globalOutfits.length) {
+        final outfit = globalOutfits[widget.outfitIndex];
+        if (outfit['items'] == null) {
+          outfit['items'] = <String>[];
+        }
+        (outfit['items'] as List).add(itemPath);
+      }
+    });
+  }
+
+  void _removeItemFromOutfit(String itemPath) {
+    setState(() {
+      if (widget.outfitIndex < globalOutfits.length) {
+        (globalOutfits[widget.outfitIndex]['items'] as List).remove(itemPath);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final outfit = (widget.outfitIndex < globalOutfits.length)
+        ? globalOutfits[widget.outfitIndex]
+        : {'title': '', 'items': []};
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -71,7 +95,6 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
                           size: 28,
                         ),
                         onPressed: () {
-                          // Show delete confirmation dialog
                           showDialog(
                             context: context,
                             builder: (BuildContext context) {
@@ -83,11 +106,7 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(
-                                        context,
-                                      ); // Close dialog (No)
-                                    },
+                                    onPressed: () => Navigator.pop(context),
                                     child: const Text('No'),
                                   ),
                                   TextButton(
@@ -96,7 +115,7 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
                                       Navigator.pop(
                                         context,
                                         'deleted',
-                                      ); // Return 'deleted' to previous screen (Yes)
+                                      ); // Return result
                                     },
                                     child: const Text(
                                       'Yes',
@@ -116,17 +135,38 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
 
               const SizedBox(height: 30),
 
+              // ===== TITLE =====
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Text(
+                  outfit['title'] ?? 'Outfit',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
               // ===== OUTFIT ITEMS GRID (Top) =====
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  alignment: WrapAlignment.start,
-                  children: currentItems
-                      .map((path) => _buildClothingItem(path))
-                      .toList(),
-                ),
+                child: currentItems.isEmpty
+                    ? const Text(
+                        'No items in this outfit yet.',
+                        style: TextStyle(color: Colors.grey),
+                      )
+                    : Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.start,
+                        children: currentItems
+                            .map(
+                              (path) =>
+                                  _buildClothingItem(path, canDelete: true),
+                            )
+                            .toList(),
+                      ),
               ),
 
               const SizedBox(height: 30),
@@ -170,7 +210,7 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
                     children: suggestedItems.map((path) {
                       return GestureDetector(
                         onTap: () => _moveItemToOutfit(path),
-                        child: _buildClothingItem(path),
+                        child: _buildClothingItem(path, canDelete: false),
                       );
                     }).toList(),
                   ),
@@ -185,26 +225,29 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
     );
   }
 
-  Widget _buildClothingItem(String imagePath) {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset(
-            imagePath,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return const Center(
-                child: Icon(Icons.image_not_supported, color: Colors.grey),
-              );
-            },
+  Widget _buildClothingItem(String imagePath, {required bool canDelete}) {
+    return GestureDetector(
+      onLongPress: canDelete ? () => _removeItemFromOutfit(imagePath) : null,
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9F9F9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Icon(Icons.image_not_supported, color: Colors.grey),
+                );
+              },
+            ),
           ),
         ),
       ),

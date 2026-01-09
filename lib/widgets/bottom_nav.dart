@@ -24,7 +24,7 @@ class BottomNav extends StatelessWidget {
           _icon(Icons.group, 0),
           _icon(Icons.tune, 1),
           _icon(Icons.favorite, 2),
-          _icon(Icons.person, 3),
+          _icon(Icons.checkroom, 3),
         ],
       ),
     );
