@@ -22,9 +22,7 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -41,8 +39,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // home: const IntroScreen(),
-      //home: const AuthScreen(),
-      home: const HomeScreen(),
+      home: const AuthScreen(),
+      // home: const HomeScreen(),
       // home: const FriendProfileScreen(),
       // home: const FriendProfileOutfit(),
       // home: const MyOutfitsScreen(),
