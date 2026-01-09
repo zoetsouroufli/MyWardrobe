@@ -16,21 +16,30 @@ class ClothingCategoriesScreen extends StatefulWidget {
 }
 
 class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
-  List<String> _userItems = [];
+  bool _isLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadUserItems();
+    _loadWardrobe();
   }
 
-  Future<void> _loadUserItems() async {
+  Future<void> _loadWardrobe() async {
     await WardrobeManager().init();
     if (mounted) {
       setState(() {
-        _userItems = WardrobeManager().getItems();
+        _isLoaded = true;
       });
     }
+  }
+
+  List<String> _getCategoryItems(
+    String category, {
+    List<String> defaults = const [],
+  }) {
+    if (!_isLoaded) return defaults;
+    final userItems = WardrobeManager().getItemsByCategory(category);
+    return [...defaults, ...userItems];
   }
 
   @override
@@ -85,27 +94,45 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
 
               const SizedBox(height: 30),
 
-              // ===== USER UPLOADS =====
-              if (_userItems.isNotEmpty)
-                CategoryDropdownTile(title: 'My Uploads', images: _userItems),
-
               // ===== CATEGORIES =====
-              const CategoryDropdownTile(
+              CategoryDropdownTile(
                 title: 'Pants',
-                images: [
-                  'assets/pants-1.jpg',
-                  'assets/pants-2.jpg',
-                  'assets/pants-3.jpg',
-                  'assets/pants-4.jpg',
-                  'assets/pants-5.jpg',
-                  'assets/pants-6.jpg',
-                ],
+                images: _getCategoryItems(
+                  'Pants',
+                  defaults: [
+                    'assets/pants-1.jpg',
+                    'assets/pants-2.jpg',
+                    'assets/pants-3.jpg',
+                    'assets/pants-4.jpg',
+                    'assets/pants-5.jpg',
+                    'assets/pants-6.jpg',
+                  ],
+                ),
               ),
-              const CategoryDropdownTile(title: 'T-Shirts'),
-              const CategoryDropdownTile(title: 'Hoodies'),
-              const CategoryDropdownTile(title: 'Jackets'),
-              const CategoryDropdownTile(title: 'Socks'),
-              const CategoryDropdownTile(title: 'Shoes'),
+              CategoryDropdownTile(
+                title: 'T-Shirts',
+                images: _getCategoryItems('T-Shirts'),
+              ),
+              CategoryDropdownTile(
+                title: 'Hoodies',
+                images: _getCategoryItems('Hoodies'),
+              ),
+              CategoryDropdownTile(
+                title: 'Jackets',
+                images: _getCategoryItems('Jackets'),
+              ),
+              CategoryDropdownTile(
+                title: 'Socks',
+                images: _getCategoryItems('Socks'),
+              ),
+              CategoryDropdownTile(
+                title: 'Shoes',
+                images: _getCategoryItems('Shoes'),
+              ),
+              CategoryDropdownTile(
+                title: 'Accessories',
+                images: _getCategoryItems('Accessories'),
+              ),
 
               const SizedBox(height: 20),
             ],

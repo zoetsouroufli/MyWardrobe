@@ -1,13 +1,14 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // IsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img; // For flipping
-import 'package:path_provider/path_provider.dart'; // For temp file
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import '../widgets/back_button.dart';
-import 'clothing_categories.dart'; // To navigate on trash
-import 'selected_clothing_item.dart'; // To navigate on save
+import 'clothing_categories.dart';
+import 'selected_clothing_item.dart';
 import '../services/background_remover.dart';
 import '../services/wardrobe_manager.dart';
+import '../services/image_classifier.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
   final String imagePath;
@@ -24,16 +25,40 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   late String _displayImagePath;
   final TextEditingController _brandController = TextEditingController();
 
+  String _selectedCategory = 'Pants';
+  final List<String> _categories = [
+    'Pants',
+    'T-Shirts',
+    'Hoodies',
+    'Jackets',
+    'Socks',
+    'Shoes',
+    'Accessories',
+  ];
+
   @override
   void initState() {
     super.initState();
     _displayImagePath = widget.imagePath;
+    _autoClassify();
+  }
+
+  Future<void> _autoClassify() async {
+    if (kIsWeb) return; // Labeling not supported on web yet
+    final category = await ImageClassifier().classifyImage(widget.imagePath);
+    if (category != null && mounted) {
+      setState(() {
+        _selectedCategory = category;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Auto-detected: $category')));
+    }
   }
 
   Future<void> _isolateImage() async {
     setState(() => _isIsolating = true);
 
-    // Call our service
     final resultPath = await BackgroundRemover().removeBackground(
       _displayImagePath,
     );
@@ -65,28 +90,17 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   void _onDiscard() {
-    // Return to "Selected Categories" i.e. ClothingCategoriesScreen
-    // Since we are in a stack (Camera -> Upload), we might want to pop until we are back.
-    // Or pushReplacement.
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const ClothingCategoriesScreen()),
-      (route) => false, // Remove all previous routes
+      (route) => false,
     );
-    // Note: This resets nav stack. If user wants to keep history, popUntil might be better.
-    // But "Return to selected categories" usually implies "Cancel everything".
   }
 
   void _onSave() async {
-    // If mirrored, flip the file before saving/passing
-    String finalPath = _displayImagePath; // Use current displayed image
+    String finalPath = _displayImagePath;
 
     if (_isMirrored) {
-      if (kIsWeb) {
-        // Web flip not implemented for file (blob). Just pass state or skip.
-        // For MVP we skip file flip on web.
-        // For MVP we skip file flip on web.
-      } else {
-        // Native flip
+      if (!kIsWeb) {
         try {
           final bytes = await File(finalPath).readAsBytes();
           final originalImg = img.decodeImage(bytes);
@@ -110,21 +124,21 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       }
     }
 
-    // If not web, persist to WardrobeManager
     if (!kIsWeb) {
       await WardrobeManager().init();
-      final permPath = await WardrobeManager().saveImagePermanent(finalPath);
-      finalPath = permPath; // Update path to point to permanent file
+      final permPath = await WardrobeManager().saveImagePermanent(
+        finalPath,
+        category: _selectedCategory,
+      );
+      finalPath = permPath;
     }
 
     if (mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => SelectedClothingItemScreen(
-            imagePath: finalPath,
-            // Pass brand/comments if refactored. For now just image.
-          ),
+          builder: (context) =>
+              SelectedClothingItemScreen(imagePath: finalPath),
         ),
       );
     }
@@ -146,17 +160,12 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Back (Return to Camera)
                   BackButtonCircle(onPressed: () => Navigator.pop(context)),
-
-                  // Logo
                   Image.asset(
                     'assets/MyWardrobe.png',
                     width: 150,
                     fit: BoxFit.contain,
                   ),
-
-                  // Trash (Discard)
                   GestureDetector(
                     onTap: _onDiscard,
                     child: Container(
@@ -173,7 +182,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
               const SizedBox(height: 30),
 
-              // ===== IMAGE AREA with MIRROR Toggle =====
+              // ===== IMAGE =====
               Center(
                 child: Stack(
                   alignment: Alignment.bottomRight,
@@ -200,7 +209,6 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                               child: _buildImage(),
                             ),
                     ),
-                    // Mirror Button
                     if (!_isIsolating)
                       Positioned(
                         bottom: 8,
@@ -208,7 +216,6 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Isolate Button
                             FloatingActionButton.small(
                               heroTag: 'isolate_btn',
                               onPressed: _isolateImage,
@@ -219,7 +226,6 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Mirror Button
                             FloatingActionButton.small(
                               heroTag: 'mirror_btn',
                               onPressed: () {
@@ -246,15 +252,13 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFFD01FE8),
-                  ), // Purple border
+                  border: Border.all(color: const Color(0xFFD01FE8)),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   controller: _brandController,
                   decoration: const InputDecoration(
-                    hintText: 'brand',
+                    hintText: 'Brand',
                     border: InputBorder.none,
                     suffixIcon: Icon(Icons.close, color: Colors.black54),
                   ),
@@ -263,9 +267,38 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
               const SizedBox(height: 20),
 
+              // ===== CATEGORY DROPDOWN =====
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: const Color(0xFFD01FE8)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedCategory,
+                    isExpanded: true,
+                    hint: const Text('Select Category'),
+                    items: _categories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedCategory = newValue;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 40),
 
-              // Save Button (Not in screenshot but needed to proceed)
+              // ===== SAVE =====
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
