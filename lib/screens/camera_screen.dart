@@ -25,10 +25,21 @@ class _CameraScreenState extends State<CameraScreen> {
     // For now assuming the list passed is valid.
     if (widget.cameras.isNotEmpty) {
         _controller = CameraController(
-        widget.cameras.first,
-        ResolutionPreset.high,
+          widget.cameras.first,
+          ResolutionPreset.medium, // Lower resolution for better web compatibility
         );
-        _initializeControllerFuture = _controller.initialize();
+        _initializeControllerFuture = _controller.initialize().catchError((Object e) {
+          if (e is CameraException) {
+            switch (e.code) {
+              case 'CameraAccessDenied':
+                print('User denied camera access.');
+                break;
+              default:
+                print('Handle other errors.');
+                break;
+            }
+          }
+        });
     }
   }
 
