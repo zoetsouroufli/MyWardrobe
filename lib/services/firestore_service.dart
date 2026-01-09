@@ -2,9 +2,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
-  final _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String get uid => FirebaseAuth.instance.currentUser!.uid;
+
+  Future<void> seedDummyUser() async {
+    try {
+      // Create a dummy user in 'users' collection
+      await _db.collection('users').doc('dummy_user_1').set({
+        'username': 'testuser',
+        'description': 'I am a test user for searching.',
+        'email': 'test@example.com',
+      });
+      print('Dummy user created!');
+    } catch (e) {
+      print('Error seeding dummy user: $e');
+    }
+  }
 
   Future<void> addClothingItem(Map<String, dynamic> data) async {
     await _db
@@ -65,6 +80,7 @@ class FirestoreService {
       ]
     };
 
+    print('Seeding sample data for user $uid...');
     for (var entry in sampleData.entries) {
       final category = entry.key;
       final assets = entry.value;
@@ -76,6 +92,7 @@ class FirestoreService {
           .get();
           
       if (catSnapshot.docs.isEmpty) {
+         print('Adding $category...');
          for (var assetPath in assets) {
            final docRef = wardrobeRef.doc();
            batch.set(docRef, {
@@ -85,10 +102,37 @@ class FirestoreService {
              'isSample': true,
            });
          }
+      } else {
+        print('Category $category already exists.');
       }
     }
 
     await batch.commit();
+    print('Seeding complete.');
+  }
+
+  Future<void> clearWardrobe() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    final wardrobeRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('wardrobe');
+        
+    final snapshot = await wardrobeRef.get();
+    if (snapshot.docs.isEmpty) {
+        print('Wardrobe already empty.');
+        return;
+    }
+
+    final batch = _db.batch();
+    for (var doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    
+    await batch.commit();
+    print('Wardrobe cleared.');
   }
 
   Future<void> seedFriends() async {
