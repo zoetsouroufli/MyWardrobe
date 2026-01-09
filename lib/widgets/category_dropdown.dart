@@ -4,12 +4,12 @@ import '../screens/selected_clothing_item.dart';
 
 class CategoryDropdownTile extends StatelessWidget {
   final String title;
-  final List<String> images;
+  final List<Map<String, dynamic>> items; // Changed from List<String> images
 
   const CategoryDropdownTile({
     super.key,
     required this.title,
-    this.images = const [],
+    this.items = const [],
   });
 
   @override
@@ -40,7 +40,7 @@ class CategoryDropdownTile extends StatelessWidget {
             bottom: 12,
           ),
           children: [
-            if (images.isNotEmpty)
+            if (items.isNotEmpty)
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -50,16 +50,22 @@ class CategoryDropdownTile extends StatelessWidget {
                   crossAxisSpacing: 8,
                   childAspectRatio: 1,
                 ),
-                itemCount: images.length,
+                itemCount: items.length,
                 itemBuilder: (context, index) {
+                  final item = items[index];
+                  final imagePath = item['imageUrl'] as String;
+                  final itemId = item['id'] as String?;
+                  final itemData = item['data'] as Map<String, dynamic>? ?? {};
+
                   return GestureDetector(
                     onTap: () {
-                      // print('Image tapped: ${images[index]}');
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => SelectedClothingItemScreen(
-                            imagePath: images[index],
+                            imagePath: imagePath,
+                            itemId: itemId,     // Pass ID
+                            initialData: itemData, // Pass Data
                           ),
                         ),
                       );
@@ -71,9 +77,9 @@ class CategoryDropdownTile extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: (images[index].startsWith('http') || images[index].startsWith('blob:'))
+                        child: (imagePath.startsWith('http') || imagePath.startsWith('blob:'))
                             ? Image.network(
-                                images[index],
+                                imagePath,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return const Center(
@@ -83,27 +89,10 @@ class CategoryDropdownTile extends StatelessWidget {
                                     ),
                                   );
                                 },
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Center(
-                                        child: CircularProgressIndicator(
-                                          value:
-                                              loadingProgress
-                                                      .expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                              : null,
-                                        ),
-                                      );
-                                    },
-                              )
-                            : (images[index].startsWith('assets/')
+                            )
+                            : (imagePath.startsWith('assets/')
                                   ? Image.asset(
-                                      images[index],
+                                      imagePath,
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
@@ -116,8 +105,7 @@ class CategoryDropdownTile extends StatelessWidget {
                                           },
                                     )
                                   : Image.file(
-                                      // Assume local file if not http and not asset
-                                      File(images[index]),
+                                      File(imagePath),
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {

@@ -108,6 +108,27 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                   TextButton(
                     onPressed: () async {
                       try {
+                        await FirestoreService().migrateWardrobe();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Migration Complete: Dummy Data Added!'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        print(e);
+                      }
+                    },
+                    child: const Text(
+                      'Migrate Data',
+                      style: TextStyle(color: Colors.blue),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  TextButton(
+                    onPressed: () async {
+                      try {
                         await FirestoreService().clearWardrobe();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +182,7 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                   final docs = snapshot.data!.docs;
 
                   // Helper function to filter by category
-                  List<String> getImagesFor(String category) {
+                  List<Map<String, dynamic>> getItemsFor(String category) {
                     final remote = docs
                         .where(
                           (doc) =>
@@ -170,15 +191,19 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                               category,
                         )
                         .map(
-                          (doc) =>
-                              (doc.data() as Map<String, dynamic>)['imageUrl']
-                                  as String,
+                          (doc) => {
+                            'imageUrl': (doc.data() as Map<String, dynamic>)['imageUrl'],
+                            'id': doc.id,
+                            'data': doc.data(),
+                          },
                         )
                         .toList();
 
-                    final local = WardrobeManager().getItemsByCategory(
-                      category,
-                    );
+                    final local = WardrobeManager().getItemsByCategory(category).map((path) => {
+                       'imageUrl': path,
+                       'id': null, // Local items have no ID yet
+                       'data': <String, dynamic>{}, 
+                    }).toList();
 
                     return [...local, ...remote];
                   }
@@ -187,31 +212,31 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                     children: [
                       CategoryDropdownTile(
                         title: 'Pants',
-                        images: getImagesFor('Pants'),
+                        items: getItemsFor('Pants'),
                       ),
                       CategoryDropdownTile(
                         title: 'T-Shirts',
-                        images: getImagesFor('T-Shirts'),
+                        items: getItemsFor('T-Shirts'),
                       ),
                       CategoryDropdownTile(
                         title: 'Hoodies',
-                        images: getImagesFor('Hoodies'),
+                        items: getItemsFor('Hoodies'),
                       ),
                       CategoryDropdownTile(
                         title: 'Jackets',
-                        images: getImagesFor('Jackets'),
+                        items: getItemsFor('Jackets'),
                       ),
                       CategoryDropdownTile(
                         title: 'Socks',
-                        images: getImagesFor('Socks'),
+                        items: getItemsFor('Socks'),
                       ),
                       CategoryDropdownTile(
                         title: 'Shoes',
-                        images: getImagesFor('Shoes'),
+                        items: getItemsFor('Shoes'),
                       ),
                       CategoryDropdownTile(
                         title: 'Accessories',
-                        images: getImagesFor('Accessories'),
+                        items: getItemsFor('Accessories'),
                       ),
                     ],
                   );

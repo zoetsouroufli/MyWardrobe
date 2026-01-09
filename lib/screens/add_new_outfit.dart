@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
+import '../services/firestore_service.dart';
 
 class AddNewOutfitScreen extends StatefulWidget {
   final String imagePath; // Item to add to the new outfit
@@ -49,6 +50,9 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
         .doc(user.uid)
         .collection('outfits')
         .add(newOutfit);
+
+    // Update item status
+    await FirestoreService().updateItemInOutfitStatus([widget.imagePath], true);
 
     if (mounted) {
       Navigator.pop(context);
