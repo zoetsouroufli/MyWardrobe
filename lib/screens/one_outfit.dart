@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
-import 'my_outfits.dart'; // Import globalOutfits
 
 class OneOutfitScreen extends StatefulWidget {
-  final int outfitIndex; // Accept index to access shared data
+  final Map<String, dynamic> outfitData;
+  final String? outfitId;
 
-  const OneOutfitScreen({super.key, required this.outfitIndex});
+  const OneOutfitScreen({super.key, required this.outfitData, this.outfitId});
 
   @override
   State<OneOutfitScreen> createState() => _OneOutfitScreenState();
@@ -22,43 +22,34 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
   ];
 
   List<String> get currentItems {
-    // Safely access items from global list
-    if (widget.outfitIndex < globalOutfits.length) {
-      final items = globalOutfits[widget.outfitIndex]['items'];
-      if (items is List) {
-        return List<String>.from(items);
-      }
+    final items = widget.outfitData['items'];
+    if (items is List) {
+      return List<String>.from(items);
     }
     return [];
   }
 
   void _moveItemToOutfit(String itemPath) {
+    // TODO: Implement Firestore Update
     setState(() {
       suggestedItems.remove(itemPath);
-      // Update global list
-      if (widget.outfitIndex < globalOutfits.length) {
-        final outfit = globalOutfits[widget.outfitIndex];
-        if (outfit['items'] == null) {
-          outfit['items'] = <String>[];
-        }
-        (outfit['items'] as List).add(itemPath);
+      if (widget.outfitData['items'] == null) {
+         widget.outfitData['items'] = <String>[];
       }
+      (widget.outfitData['items'] as List).add(itemPath);
     });
   }
 
   void _removeItemFromOutfit(String itemPath) {
+      // TODO: Implement Firestore Update
     setState(() {
-      if (widget.outfitIndex < globalOutfits.length) {
-        (globalOutfits[widget.outfitIndex]['items'] as List).remove(itemPath);
-      }
+       (widget.outfitData['items'] as List).remove(itemPath);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final outfit = (widget.outfitIndex < globalOutfits.length)
-        ? globalOutfits[widget.outfitIndex]
-        : {'title': '', 'items': []};
+    final outfit = widget.outfitData;
 
     return Scaffold(
       backgroundColor: Colors.white,

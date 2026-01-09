@@ -184,4 +184,50 @@ class FirestoreService {
 
     await batch.commit();
   }
+
+  Future<void> seedMyOutfits() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final outfitsRef = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('outfits');
+
+    final snapshot = await outfitsRef.limit(1).get();
+    if (snapshot.docs.isNotEmpty) return;
+
+    final batch = _db.batch();
+
+    final outfits = [
+      {
+        'color': 0xFFD01FE8,
+        'title': 'outfit to go for coffee',
+        'subtitle': 'maybe with red socks it would work better',
+        'likes': 14,
+      },
+      {
+        'color': 0xFFFF9800,
+        'title': 'outfit to go to latraac',
+        'subtitle': 'its May and the weather is nice',
+        'likes': 12,
+      },
+      {
+        'color': 0xFF1A1A80,
+        'title': 'monday morning fit',
+        'subtitle': 'coolcoolcoolcoolcool',
+        'likes': 10,
+      },
+    ];
+
+    for (var outfit in outfits) {
+      final docRef = outfitsRef.doc();
+      batch.set(docRef, {
+        ...outfit,
+        'dateAdded': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  }
 }
