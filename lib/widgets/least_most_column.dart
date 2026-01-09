@@ -14,21 +14,21 @@ class LeastMostColumn extends StatelessWidget {
           title: 'Least worn',
           item: 'Shirt',
           times: 2,
-          imagePath: 'assets/shirt.png',
+          imagePath: 'assets/tshirt.png.jpg',
         ),
         SizedBox(height: 12),
         LeastMostCard(
           title: 'Most worn',
           item: 'Trousers',
           times: 20,
-          imagePath: 'assets/pants.png',
+          imagePath: 'assets/pants-1.jpg',
         ),
            SizedBox(height: 12),
           LeastMostCard(
             title: 'Total items',
             item: 'Items',
             times: 30,
-            imagePath: 'assets/pants.png'
+            imagePath: 'assets/pants-1.jpg'
     ),
 
       

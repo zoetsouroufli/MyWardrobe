@@ -70,15 +70,38 @@ class _SelectedClothingItemScreenState
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    widget.imagePath,
-                    fit: BoxFit.contain, // Show full item
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.broken_image,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  child: widget.imagePath.startsWith('http')
+                      ? Image.network(
+                          widget.imagePath,
+                          fit: BoxFit.contain, // Show full item
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.broken_image,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          widget.imagePath,
+                          fit: BoxFit.contain, // Show full item
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.broken_image,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                        ),
                 ),
               ),
 

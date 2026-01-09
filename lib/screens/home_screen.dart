@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/firestore_service.dart';
 import '../widgets/bottom_nav.dart';
 import 'friend_profile.dart';
 import 'my_outfits.dart';
@@ -28,33 +31,65 @@ class HomeScreen extends StatelessWidget {
 
             // Friend Avatars Grid
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: GridView.count(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildFriendAvatar('assets/friend1.jpg', 'Friend 1'),
-                    _buildFriendAvatar('assets/friend2.jpg', 'Friend 2'),
-                    _buildFriendAvatar('assets/friend3.jpg', 'Friend 3'),
-                    _buildFriendAvatar('assets/friend4.jpg', 'Friend 4'),
-                    _buildFriendAvatar('assets/friend5.jpg', 'Friend 5'),
-                    _buildFriendAvatar('assets/friend6.jpg', 'Friend 6'),
-                    _buildFriendAvatar('assets/friend7.jpg', 'Friend 7'),
-                    _buildFriendAvatar('assets/friend8.jpg', 'Friend 8'),
-                    _buildFriendAvatar('assets/friend9.jpg', 'Friend 9'),
-                    _buildFriendAvatar('assets/friend10.jpg', 'Friend 10'),
-                    _buildFriendAvatar('assets/friend11.jpg', 'Friend 11'),
-                    _buildFriendAvatar('assets/friend12.jpg', 'Friend 12'),
-                    _buildFriendAvatar('assets/friend13.jpg', 'Friend 13'),
-                    _buildFriendAvatar('assets/friend14.jpg', 'Friend 14'),
-                    _buildFriendAvatar('assets/friend15.jpg', 'Friend 15'),
-                    _buildFriendAvatar('assets/friend16.jpg', 'Friend 16'),
-                  ],
-                ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser?.uid)
+                    .collection('friends')
+                    .orderBy('friendId', descending: false) // Sort by ID to keep order roughly 1-16
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(child: Text('Something went wrong'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('No friends yet!'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await FirestoreService().seedFriends();
+                            },
+                            child: const Text('Load Friends'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: GridView.builder(
+                      itemCount: docs.length,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 1,
+                      ),
+                      physics: const BouncingScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        final doc = docs[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        final name = data['name'] ?? 'Unknown';
+                        final username = data['username'] ?? '';
+                        final imagePath = data['avatarUrl'] ?? 'assets/friend1.jpg'; // fallback
+
+                        return _buildFriendAvatar(context, doc.id, imagePath, name, username);
+                      },
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -92,51 +127,52 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFriendAvatar(String imagePath, String name) {
-    return Builder(
-      builder: (context) {
-        return GestureDetector(
-          onTap: () {
-            print('Tapped on $name');
+  Widget _buildFriendAvatar(BuildContext context, String friendDocId, String imagePath, String name, String username) {
+    return GestureDetector(
+      onTap: () {
+        print('Tapped on $name');
 
-            // Navigate to Friend Profile for friend4 (babis heotis)
-            if (imagePath == 'assets/friend4.jpg') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const FriendProfileScreen(
-                    friendName: 'babis heotis',
-                    friendUsername: 'fashion-icon',
-                    friendPhoto: 'assets/friend4.jpg',
-                  ),
-                ),
-              );
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.shade300, width: 2),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FriendProfileScreen(
+              friendDocId: friendDocId,
+              friendName: name,
+              friendUsername: username,
+              friendPhoto: imagePath,
             ),
           ),
         );
       },
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade300, width: 2),
+        ),
+        child: ClipOval(
+          child: imagePath.startsWith('http')
+              ? Image.network(
+                  imagePath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.error),
+                )
+              : Image.asset(
+                  imagePath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.person,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
     );
   }
 }

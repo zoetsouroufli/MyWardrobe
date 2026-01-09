@@ -1,14 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/firestore_service.dart';
 import '../widgets/back_button.dart';
 import 'friend_outfit.dart';
 
 class FriendProfileScreen extends StatelessWidget {
+  final String friendDocId;
   final String friendName;
   final String friendUsername;
   final String friendPhoto;
 
   const FriendProfileScreen({
     super.key,
+    required this.friendDocId,
     this.friendName = 'babis heotis',
     this.friendUsername = 'fashion-icon',
     this.friendPhoto = 'assets/friend4.jpg',
@@ -62,7 +67,9 @@ class FriendProfileScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundImage: AssetImage(friendPhoto),
+                    backgroundImage: friendPhoto.startsWith('http')
+                        ? NetworkImage(friendPhoto)
+                        : AssetImage(friendPhoto) as ImageProvider,
                     backgroundColor: Colors.grey,
                   ),
                   const SizedBox(width: 16),
@@ -91,39 +98,65 @@ class FriendProfileScreen extends StatelessWidget {
 
             // Outfit Grid
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                padding: const EdgeInsets.all(16),
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                children: const [
-                  OutfitCard(
-                    color: Colors.red,
-                    title: 'chill cinema outfit',
-                    description:
-                        'saw Vougonia in this outfit... do not wear again',
-                    initialLikes: 14,
-                  ),
-                  OutfitCard(
-                    color: Colors.cyan,
-                    title: 'go thrifting',
-                    description: 'thrifted fit...to go thrifting',
-                    initialLikes: 10,
-                  ),
-                  OutfitCard(
-                    color: Color(0xFF7CB342),
-                    title: 'party tzous',
-                    description: 'May 15th get ready idea',
-                    initialLikes: 12,
-                  ),
-                  OutfitCard(
-                    color: Colors.pinkAccent,
-                    title: 'outfit uni thursday',
-                    description: 'needs a black hoodie',
-                    initialLikes: 213,
-                  ),
-                ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser?.uid)
+                    .collection('friends')
+                    .doc(friendDocId)
+                    .collection('outfits')
+                    .orderBy('dateAdded', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(child: Text('Something went wrong'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('No outfits found for this friend.'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () async {
+                                await FirestoreService().seedFriendOutfits(friendDocId);
+                            },
+                            child: const Text('Load Sample Outfits'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.75,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                    ),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        final colorValue = data['color'] as int? ?? 0xFFCCCCCC;
+                        return OutfitCard(
+                            color: Color(colorValue),
+                            title: data['title'] ?? '',
+                            description: data['description'] ?? '',
+                            initialLikes: data['likes'] ?? 0,
+                        );
+                    },
+                  );
+                },
               ),
             ),
           ],
