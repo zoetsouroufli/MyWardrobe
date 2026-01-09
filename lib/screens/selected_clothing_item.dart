@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 import 'my_outfits.dart';
@@ -70,15 +72,7 @@ class _SelectedClothingItemScreenState
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    widget.imagePath,
-                    fit: BoxFit.contain, // Show full item
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.broken_image,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  child: _buildImage(),
                 ),
               ),
 
@@ -221,6 +215,34 @@ class _SelectedClothingItemScreenState
         ),
       ),
     );
+  }
+
+  Widget _buildImage() {
+    if (widget.imagePath.startsWith('assets/')) {
+      return Image.asset(
+        widget.imagePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+      );
+    } else if (kIsWeb) {
+      return Image.network(
+        widget.imagePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => const Icon(
+          Icons.broken_image, // Fallback if blob invalid
+          size: 50,
+          color: Colors.amber,
+        ),
+      );
+    } else {
+      return Image.file(
+        File(widget.imagePath),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, size: 50, color: Colors.red),
+      );
+    }
   }
 
   Widget _buildStatRow({

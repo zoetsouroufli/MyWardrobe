@@ -5,9 +5,33 @@ import '../widgets/add_new_item.dart';
 import 'home_screen.dart';
 import 'stats.dart';
 import 'my_outfits.dart';
+import '../services/wardrobe_manager.dart';
 
-class ClothingCategoriesScreen extends StatelessWidget {
+class ClothingCategoriesScreen extends StatefulWidget {
   const ClothingCategoriesScreen({super.key});
+
+  @override
+  State<ClothingCategoriesScreen> createState() =>
+      _ClothingCategoriesScreenState();
+}
+
+class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
+  List<String> _userItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserItems();
+  }
+
+  Future<void> _loadUserItems() async {
+    await WardrobeManager().init();
+    if (mounted) {
+      setState(() {
+        _userItems = WardrobeManager().getItems();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +84,10 @@ class ClothingCategoriesScreen extends StatelessWidget {
               const AddNewItemButton(),
 
               const SizedBox(height: 30),
+
+              // ===== USER UPLOADS =====
+              if (_userItems.isNotEmpty)
+                CategoryDropdownTile(title: 'My Uploads', images: _userItems),
 
               // ===== CATEGORIES =====
               const CategoryDropdownTile(

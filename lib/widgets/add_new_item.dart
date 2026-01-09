@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../screens/camera_screen.dart';
+import '../screens/upload_photo.dart';
 
 class AddNewItemButton extends StatelessWidget {
   const AddNewItemButton({super.key});
@@ -19,8 +20,12 @@ class AddNewItemButton extends StatelessWidget {
             );
 
             if (result != null && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Image saved at: $result')),
+              // Navigate to UploadPhotoScreen for "isolation" and details entry
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UploadPhotoScreen(imagePath: result),
+                ),
               );
             }
           }
