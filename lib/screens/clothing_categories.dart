@@ -81,23 +81,49 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
               // ===== ADD NEW ITEM BUTTON =====
               const AddNewItemButton(),
 
-              TextButton(
-                onPressed: () async {
-                  try {
-                    await FirestoreService().seedSampleData();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sample data loaded!')),
-                      );
-                    }
-                  } catch (e) {
-                    print(e);
-                  }
-                },
-                child: const Text(
-                  'Load Sample Data',
-                  style: TextStyle(color: Colors.grey),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await FirestoreService().seedSampleData();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Sample data loaded!'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        print(e);
+                      }
+                    },
+                    child: const Text(
+                      'Load Sample Data',
+                      style: TextStyle(color: Colors.green),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await FirestoreService().clearWardrobe();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Wardrobe cleared!')),
+                          );
+                        }
+                      } catch (e) {
+                        print(e);
+                      }
+                    },
+                    child: const Text(
+                      'Clear Wardrobe',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 30),
@@ -113,9 +139,26 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                           .snapshots()
                     : const Stream.empty(),
                 builder: (context, snapshot) {
-                  // We always show tiles, even if waiting, to show local items if available
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                  final docs = snapshot.hasData ? snapshot.data!.docs : [];
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    // Show empty tiles if no data
+                    return Column(
+                      children: const [
+                        CategoryDropdownTile(title: 'Pants'),
+                        CategoryDropdownTile(title: 'T-Shirts'),
+                        CategoryDropdownTile(title: 'Hoodies'),
+                        CategoryDropdownTile(title: 'Jackets'),
+                        CategoryDropdownTile(title: 'Socks'),
+                        CategoryDropdownTile(title: 'Shoes'),
+                        CategoryDropdownTile(title: 'Accessories'),
+                      ],
+                    );
+                  }
+
+                  final docs = snapshot.data!.docs;
 
                   // Helper function to filter by category
                   List<String> getImagesFor(String category) {

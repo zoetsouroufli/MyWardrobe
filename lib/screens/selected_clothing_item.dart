@@ -71,7 +71,7 @@ class _SelectedClothingItemScreenState
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: widget.imagePath.startsWith('http')
+                  child: (widget.imagePath.startsWith('http') || widget.imagePath.startsWith('blob:'))
                       ? Image.network(
                           widget.imagePath,
                           fit: BoxFit.contain, // Show full item
