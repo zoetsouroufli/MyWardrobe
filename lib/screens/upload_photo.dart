@@ -2,12 +2,15 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/back_button.dart';
 import 'clothing_categories.dart';
 import 'selected_clothing_item.dart';
 import '../services/background_remover.dart';
-import '../services/wardrobe_manager.dart';
+import '../services/firestore_service.dart';
 import '../services/image_classifier.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
@@ -22,6 +25,7 @@ class UploadPhotoScreen extends StatefulWidget {
 class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   bool _isIsolating = false;
   bool _isMirrored = false;
+  bool _isSaving = false;
   late String _displayImagePath;
   final TextEditingController _brandController = TextEditingController();
 
@@ -44,7 +48,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   Future<void> _autoClassify() async {
-    if (kIsWeb) return; // Labeling not supported on web yet
+    if (kIsWeb) return;
     final category = await ImageClassifier().classifyImage(widget.imagePath);
     if (category != null && mounted) {
       setState(() {
@@ -97,8 +101,10 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   void _onSave() async {
+    setState(() => _isSaving = true);
     String finalPath = _displayImagePath;
 
+    // 1. Flip if needed
     if (_isMirrored) {
       if (!kIsWeb) {
         try {
@@ -124,23 +130,54 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       }
     }
 
-    if (!kIsWeb) {
-      await WardrobeManager().init();
-      final permPath = await WardrobeManager().saveImagePermanent(
-        finalPath,
-        category: _selectedCategory,
-      );
-      finalPath = permPath;
-    }
+    // 2. Upload to Firebase Storage and Save to Firestore
+    try {
+      String imageUrl = finalPath;
 
-    if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              SelectedClothingItemScreen(imagePath: finalPath),
-        ),
-      );
+      if (!kIsWeb) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('User not logged in');
+        }
+
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${p.basename(finalPath)}';
+        final ref = FirebaseStorage.instance.ref().child(
+          'users/${user.uid}/wardrobe/$fileName',
+        );
+
+        final file = File(finalPath);
+        await ref.putFile(file);
+        imageUrl = await ref.getDownloadURL();
+
+        // Save metadata to Firestore
+        await FirestoreService().addClothingItem({
+          'imageUrl': imageUrl,
+          'category': _selectedCategory,
+          'brand': _brandController.text,
+          'dateAdded': FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                SelectedClothingItemScreen(imagePath: imageUrl),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -190,15 +227,19 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                     Container(
                       height: 300,
                       alignment: Alignment.center,
-                      child: _isIsolating
-                          ? const Column(
+                      child: _isIsolating || _isSaving
+                          ? Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CircularProgressIndicator(
+                                const CircularProgressIndicator(
                                   color: Color(0xFF9C27B0),
                                 ),
-                                SizedBox(height: 16),
-                                Text('Isolating clothing item...'),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _isSaving
+                                      ? 'Saving...'
+                                      : 'Isolating clothing item...',
+                                ),
                               ],
                             )
                           : Transform(
@@ -209,7 +250,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                               child: _buildImage(),
                             ),
                     ),
-                    if (!_isIsolating)
+                    if (!_isIsolating && !_isSaving)
                       Positioned(
                         bottom: 8,
                         right: 8,
@@ -302,7 +343,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _onSave,
+                  onPressed: _isSaving ? null : _onSave,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF9C27B0),
                     padding: const EdgeInsets.symmetric(vertical: 16),
