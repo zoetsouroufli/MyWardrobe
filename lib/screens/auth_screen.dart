@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import '../services/auth_service.dart';
+
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -9,12 +11,13 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLogin = true; // Toggle between Login and Register
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -36,9 +39,9 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 24),
 
               // Title
-              const Text(
-                'Please Register',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
+              Text(
+                _isLogin ? 'Please Sign In' : 'Create Account',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
               ),
 
               const SizedBox(height: 32),
@@ -54,9 +57,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Username Label
+                    // Email Label
                     const Text(
-                      'Username',
+                      'Email',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -65,13 +68,13 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Username TextField
+                    // Email TextField
                     TextField(
-                      controller: _usernameController,
+                      controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        hintText: 'Value',
+                        hintText: 'Enter your email',
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         filled: true,
                         fillColor: Colors.grey[50],
@@ -117,7 +120,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       keyboardType: TextInputType.visiblePassword,
                       textInputAction: TextInputAction.done,
                       decoration: InputDecoration(
-                        hintText: 'Value',
+                        hintText: 'Enter your password',
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         filled: true,
                         fillColor: Colors.grey[50],
@@ -145,7 +148,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Sign In Button
+                    // Action Button (Login / Register)
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -158,18 +161,40 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                           elevation: 0,
                         ),
-                        onPressed: () {
-                          // Navigate to HomeScreen
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
-                            ),
-                          );
+                        onPressed: () async {
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text.trim();
+
+                          if (email.isEmpty || password.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please fill all fields')),
+                            );
+                            return;
+                          }
+
+                          try {
+                            if (_isLogin) {
+                              await AuthService().login(email, password);
+                            } else {
+                              await AuthService().register(email, password);
+                            }
+
+                            if (!mounted) return;
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomeScreen(),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
                         },
-                        child: const Text(
-                          'Sign In',
-                          style: TextStyle(
+                        child: Text(
+                          _isLogin ? 'Sign In' : 'Register',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -179,15 +204,19 @@ class _AuthScreenState extends State<AuthScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Forgot Password
+                    // Toggle Login/Register
                     Center(
-                      child: GestureDetector(
-                        onTap: () {
-                          print('Forgot password tapped');
+                      child: TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isLogin = !_isLogin;
+                          });
                         },
-                        child: const Text(
-                          'Forgot password?',
-                          style: TextStyle(
+                        child: Text(
+                          _isLogin
+                              ? 'Don\'t have an account? Register'
+                              : 'Already have an account? Sign In',
+                          style: const TextStyle(
                             fontSize: 14,
                             color: Colors.black87,
                             decoration: TextDecoration.underline,

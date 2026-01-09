@@ -1,36 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/firestore_service.dart';
 import '../widgets/bottom_nav.dart';
 import 'edit_profile.dart';
 import 'one_outfit.dart';
 import 'home_screen.dart';
 import 'stats.dart';
 import 'clothing_categories.dart';
-
-// Global variable to share outfits data across screens
-List<Map<String, dynamic>> globalOutfits = [
-  {
-    'color': const Color(0xFFD01FE8),
-    'title': 'outfit to go for coffee',
-    'subtitle': 'maybe with red socks it would work better',
-    'likes': 14,
-    'items': [],
-  },
-  {
-    'color': const Color(0xFFFF9800),
-    'title': 'outfit to go to latraac',
-    'subtitle': 'its May and the weather is nice',
-    'likes': 12,
-    'isLink': true,
-    'items': [],
-  },
-  {
-    'color': const Color(0xFF1A1A80),
-    'title': 'monday morning fit',
-    'subtitle': 'coolcoolcoolcoolcool',
-    'likes': 10,
-    'items': [],
-  },
-];
 
 class MyOutfitsScreen extends StatefulWidget {
   const MyOutfitsScreen({super.key});
@@ -40,7 +17,6 @@ class MyOutfitsScreen extends StatefulWidget {
 }
 
 class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
-  // Use globalOutfits instead of local list
 
   @override
   Widget build(BuildContext context) {
@@ -183,45 +159,85 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
 
                 const SizedBox(height: 16),
 
-                // ===== OUTFIT LIST =====
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: globalOutfits.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final outfit = globalOutfits[index];
+                // ===== OUTFIT LIST STREAM =====
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseAuth.instance.currentUser != null
+                      ? FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(FirebaseAuth.instance.currentUser!.uid)
+                          .collection('outfits')
+                          .orderBy('dateAdded', descending: true)
+                          .snapshots()
+                      : const Stream.empty(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                    return _OutfitCard(
-                      color: outfit['color'],
-                      title: outfit['title'],
-                      subtitle: outfit['subtitle'],
-                      likes: outfit['likes'],
-                      onTap: () async {
-                        if (outfit.containsKey('isLink') &&
-                            outfit['isLink'] == true) {
-                          // Navigate to OneOutfitScreen and wait for result
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  OneOutfitScreen(outfitIndex: index),
+                    final docs = snapshot.data?.docs ?? [];
+
+                    if (docs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          children: [
+                            const Text('No outfits yet!'),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () async {
+                                await FirestoreService().seedMyOutfits();
+                              },
+                              child: const Text('Load Sample Outfits'),
                             ),
-                          );
+                          ],
+                        ),
+                      );
+                    }
 
-                          // Check if deleted
-                          if (result == 'deleted') {
-                            setState(() {
-                              globalOutfits.removeAt(index);
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Outfit deleted')),
-                            );
-                          }
-                        } else {
-                          print('Open outfit: ${outfit['title']}');
-                        }
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: docs.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final doc = docs[index];
+                        final outfit = doc.data() as Map<String, dynamic>;
+                        final colorValue = outfit['color'] as int? ?? 0xFFCCCCCC;
+
+                        return _OutfitCard(
+                          color: Color(colorValue),
+                          title: outfit['title'] ?? 'Outfit',
+                          subtitle: outfit['subtitle'] ?? '',
+                          likes: outfit['likes'] ?? 0,
+                          onTap: () async {
+                              // Navigate to OneOutfitScreen
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      OneOutfitScreen(
+                                        outfitData: outfit,
+                                        outfitId: doc.id,
+                                      ),
+                                ),
+                              );
+
+                              // Check if deleted
+                              if (result == 'deleted') {
+                                // Delete from firestore
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(FirebaseAuth.instance.currentUser!.uid)
+                                    .collection('outfits')
+                                    .doc(doc.id)
+                                    .delete();
+                                    
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Outfit deleted')),
+                                );
+                              }
+                          },
+                        );
                       },
                     );
                   },

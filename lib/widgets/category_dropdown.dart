@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../screens/selected_clothing_item.dart';
 
@@ -53,14 +51,15 @@ class CategoryDropdownTile extends StatelessWidget {
                 ),
                 itemCount: images.length,
                 itemBuilder: (context, index) {
-                  final imagePath = images[index];
                   return GestureDetector(
                     onTap: () {
+                      // print('Image tapped: ${images[index]}');
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              SelectedClothingItemScreen(imagePath: imagePath),
+                          builder: (context) => SelectedClothingItemScreen(
+                            imagePath: images[index],
+                          ),
                         ),
                       );
                     },
@@ -71,7 +70,42 @@ class CategoryDropdownTile extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: _buildImage(imagePath),
+                        child: images[index].startsWith('http')
+                            ? Image.network(
+                                images[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.asset(
+                                images[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ),
                   );
@@ -89,38 +123,5 @@ class CategoryDropdownTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildImage(String path) {
-    if (path.startsWith('assets/')) {
-      return Image.asset(
-        path,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return const Center(
-            child: Icon(Icons.broken_image, color: Colors.grey),
-          );
-        },
-      );
-    } else if (kIsWeb) {
-      return Image.network(
-        path,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            const Center(child: Icon(Icons.broken_image, color: Colors.amber)),
-      );
-    } else {
-      return Image.file(
-        File(path),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          // Debug print to see why it fails
-          print('Error loading image file: $path, $error');
-          return const Center(
-            child: Icon(Icons.broken_image, color: Colors.red),
-          );
-        },
-      );
-    }
   }
 }

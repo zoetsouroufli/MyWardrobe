@@ -1,7 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
-import 'my_outfits.dart'; // To access globalOutfits
 
 class AddNewOutfitScreen extends StatefulWidget {
   final String imagePath; // Item to add to the new outfit
@@ -24,38 +25,38 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
     super.dispose();
   }
 
-  void _saveOutfit() {
+  Future<void> _saveOutfit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     if (_nameController.text.isEmpty) {
       // Optional: Show error or assume default
-      // But user said "grapso outfit description and outfit-name kai meta patao enter"
-      // We can enforce it or not. Let's enforce name at least implicitly or allow empty.
     }
 
-    // Create new outfit
     final newOutfit = {
-      'color': _selectedColor,
+      'color': _selectedColor.value,
       'title': _nameController.text.isEmpty
           ? 'New Outfit'
           : _nameController.text,
       'subtitle': _descController.text,
       'likes': 0,
       'items': [widget.imagePath],
-      'isLink': true, // Make it openable
+      'dateAdded': FieldValue.serverTimestamp(),
     };
 
-    setState(() {
-      globalOutfits.add(newOutfit);
-    });
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('outfits')
+        .add(newOutfit);
 
-    // Navigate back to MyOutfits or just pop.
-    // User said: "na emfanizetai kai sto my_outfits page" which implies we go there or user goes there later.
-    // Usually "Done" -> Pop is enough, user can navigate. Or we can pushReplacement to main.
-    // Let's pop until we are back or just pop once.
-    Navigator.pop(context);
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('New outfit created!')));
+    if (mounted) {
+      Navigator.pop(context);
+      
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('New outfit created!')));
+    }
   }
 
   @override
