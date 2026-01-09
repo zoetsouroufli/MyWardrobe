@@ -8,7 +8,7 @@ import 'screens/my_outfits.dart';
 import 'screens/edit_profile.dart';
 import 'screens/one_outfit.dart';
 import 'screens/clothing_categories.dart';
-import 'screens/selected_category.dart';
+// import 'screens/selected_category.dart';
 import 'screens/selected_clothing_item.dart';
 import 'screens/add_to_outfit.dart';
 import 'screens/add_new_outfit.dart';
@@ -20,7 +20,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  // await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -48,10 +48,10 @@ class MyApp extends StatelessWidget {
       //home: const HomeScreen(),
       //home: const FriendProfileScreen(),
       //home: const FriendProfileOutfit(),
-      home: const MyOutfitsScreen(),
+      //home: const MyOutfitsScreen(),
       //home: const EditProfileScreen(),
-      //home: const MyOutfitScreen(),
-      //home: const ClothingCategoriesScreen(),
+      //home: const OneOutfitScreen(),
+      home: const ClothingCategoriesScreen(),
       //home: const SelectedCategoryScreen(categoryTitle: 'Pants'),
       //home: const SelectedClothingItemScreen(imagePath: 'assets/pants1.png'),
       //home: const AddToOutfitScreen(imagePath: 'assets/pants1.png'),

@@ -183,9 +183,7 @@ class _OutfitCardState extends State<OutfitCard> {
         if (widget.title == 'go thrifting') {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const FriendProfileOutfit(),
-            ),
+            MaterialPageRoute(builder: (context) => const FriendOutfitScreen()),
           );
         }
       },

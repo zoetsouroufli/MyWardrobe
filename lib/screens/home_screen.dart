@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/bottom_nav.dart';
 import 'friend_profile.dart';
+import 'my_outfits.dart';
+import 'stats.dart';
+import 'clothing_categories.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -59,7 +62,28 @@ class HomeScreen extends StatelessWidget {
             BottomNav(
               selectedIndex: 0,
               onTap: (index) {
-                print('Bottom nav tapped: $index');
+                if (index == 0) return;
+                Widget screen;
+                switch (index) {
+                  case 1:
+                    screen = const StatsScreen();
+                    break;
+                  case 2:
+                    screen = const MyOutfitsScreen();
+                    break;
+                  case 3:
+                    screen = const ClothingCategoriesScreen();
+                    break;
+                  default:
+                    return;
+                }
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => screen,
+                    transitionDuration: Duration.zero,
+                  ),
+                );
               },
             ),
           ],
