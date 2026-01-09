@@ -4,10 +4,40 @@ import 'package:my_app/widgets/card_decoration.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ClothingTypePie extends StatelessWidget {
-  const ClothingTypePie({super.key});
+  final Map<String, int> categoryCounts;
+
+  const ClothingTypePie({super.key, this.categoryCounts = const {}});
 
   @override
   Widget build(BuildContext context) {
+    // Colors map for consistency
+    final Map<String, Color> catColors = {
+      'Pants': Colors.blue,
+      'T-Shirts': Colors.purple,
+      'Hoodies': Colors.indigo,
+      'Jackets': Colors.teal,
+      'Shoes': Colors.orange,
+      'Socks': Colors.brown,
+      'Accessories': Colors.green,
+    };
+
+    // Generate sections
+    List<PieChartSectionData> sections = [];
+    int total = categoryCounts.values.fold(0, (sum, count) => sum + count);
+
+    categoryCounts.forEach((cat, count) {
+      if (count > 0) {
+        final color = catColors[cat] ?? Colors.grey;
+        final percentage = (count / total) * 100;
+        sections.add(_section(percentage, color));
+      }
+    });
+
+    if (sections.isEmpty) {
+      // Fallback if no data
+       sections.add(_section(100, Colors.grey.shade300));
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: cardDecoration(),
@@ -24,21 +54,20 @@ class ClothingTypePie extends StatelessWidget {
               PieChartData(
                 centerSpaceRadius: 45,
                 sectionsSpace: 2,
-                sections: [
-                  _section(40, Colors.purple),
-                  _section(30, Colors.blue),
-                  _section(20, Colors.orange),
-                  _section(10, Colors.green),
-                ],
+                sections: sections,
               ),
             ),
           ),
 
           const SizedBox(height: 16),
-          _legend('Tops', Colors.purple),
-          _legend('Bottoms', Colors.blue),
-          _legend('Shoes', Colors.orange),
-          _legend('Accessories', Colors.green),
+          // Dynamic Legends
+          if (categoryCounts.isEmpty)
+             const Text('No data', style: TextStyle(color: Colors.grey)),
+
+          ...categoryCounts.entries.where((e) => e.value > 0).map((e) {
+             final color = catColors[e.key] ?? Colors.grey;
+             return _legend('${e.key} (${e.value})', color);
+          }).toList(),
         ],
       ),
     );

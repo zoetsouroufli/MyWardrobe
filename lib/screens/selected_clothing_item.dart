@@ -2,12 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
+import '../widgets/color_palette_picker.dart';
+import '../services/firestore_service.dart';
 import 'add_new_outfit.dart';
 
 class SelectedClothingItemScreen extends StatefulWidget {
   final String imagePath;
+  final String? itemId;
+  final Map<String, dynamic>? initialData;
 
-  const SelectedClothingItemScreen({super.key, required this.imagePath});
+  const SelectedClothingItemScreen({
+    super.key,
+    required this.imagePath,
+    this.itemId,
+    this.initialData,
+  });
 
   @override
   State<SelectedClothingItemScreen> createState() =>
@@ -16,19 +25,55 @@ class SelectedClothingItemScreen extends StatefulWidget {
 
 class _SelectedClothingItemScreenState
     extends State<SelectedClothingItemScreen> {
-  String _size = 'S';
-  final TextEditingController _brandController = TextEditingController(
-    text: 'Zara',
-  );
-  int _timesWorn = 2;
+  late String _size;
+  late TextEditingController _brandController;
+  late TextEditingController _colorNameController;
+  late TextEditingController _priceController;
+  late int _timesWorn;
+  late int _primaryColorValue;
 
-  final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL'];
+  final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.initialData ?? {};
+    _size = data['size'] ?? 'M';
+    _brandController = TextEditingController(text: data['brand'] ?? 'Unknown');
+    _colorNameController = TextEditingController(text: data['colorName'] ?? '');
+    _priceController = TextEditingController(
+      text: (data['price'] as num?)?.toStringAsFixed(0) ?? '0'
+    );
+    _timesWorn = (data['timesWorn'] as num?)?.toInt() ?? 0;
+    _primaryColorValue = (data['primaryColor'] as int?) ?? 0xFF000000;
+  }
 
   @override
   void dispose() {
     _brandController.dispose();
+    _colorNameController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
+
+  Future<void> _updateField(Map<String, dynamic> changes) async {
+    if (widget.itemId == null) return;
+    try {
+      await FirestoreService().updateClothingItem(widget.itemId!, changes);
+      // Optional: Show subtle toast or indicator
+    } catch (e) {
+      print('Error updating item: $e');
+    }
+  }
+
+  Future<void> _updateItemsInOutfitStatus(bool status) async {
+       if (widget.itemId == null) return;
+        // Since we refactored code to update by ID, we can do it directly
+        // But the previous helper was by Image Path. Ideally use ID.
+        // For this screen we have ID.
+       await FirestoreService().updateClothingItem(widget.itemId!, {'isInOutfit': status});
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -81,17 +126,6 @@ class _SelectedClothingItemScreenState
                             size: 50,
                             color: Colors.grey,
                           ),
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                              ),
-                            );
-                          },
                         )
                       : Image.asset(
                           widget.imagePath,
@@ -113,14 +147,46 @@ class _SelectedClothingItemScreenState
               // 1. COLOUR
               _buildStatRow(
                 label: 'Colour',
-                iconAsset: 'assets/colour-palette.png',
-                content: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildColorChip('green', Colors.green.shade800),
-                    const SizedBox(width: 8),
-                    _buildColorChip('grey', Colors.grey),
-                  ],
+                iconAsset: 'assets/colour-palette.png', // Keep asset if exists, else remove
+                content: GestureDetector(
+                  onTap: () => _showColorPicker(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Color(_primaryColorValue),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 1B. COLOR NAME
+              _buildStatRow(
+                label: 'Color Name',
+                content: Container(
+                  width: 120,
+                  alignment: Alignment.centerRight,
+                  child: TextField(
+                    controller: _colorNameController,
+                    textAlign: TextAlign.end,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: 'e.g. Black',
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                    onSubmitted: (value) {
+                      _updateField({'colorName': value});
+                    },
+                  ),
                 ),
               ),
 
@@ -159,7 +225,7 @@ class _SelectedClothingItemScreenState
               _buildStatRow(
                 label: 'Brand',
                 content: Container(
-                  width: 100,
+                  width: 120,
                   alignment: Alignment.centerRight,
                   child: TextField(
                     controller: _brandController,
@@ -168,11 +234,46 @@ class _SelectedClothingItemScreenState
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
+                      hintText: 'Enter brand',
                     ),
                     style: const TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
                     ),
+                    onSubmitted: (value) {
+                      _updateField({'brand': value});
+                    },
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3B. PRICE
+              _buildStatRow(
+                label: 'Price',
+                content: Container(
+                  width: 120,
+                  alignment: Alignment.centerRight,
+                  child: TextField(
+                    controller: _priceController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: '0',
+                      suffixText: '€',
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                    onSubmitted: (value) {
+                      final price = double.tryParse(value) ?? 0.0;
+                      _updateField({'price': price});
+                    },
                   ),
                 ),
               ),
@@ -186,10 +287,13 @@ class _SelectedClothingItemScreenState
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildCounterButton(Icons.remove, () {
-                      if (_timesWorn > 0) setState(() => _timesWorn--);
+                      if (_timesWorn > 0) {
+                        setState(() => _timesWorn--);
+                        _updateField({'timesWorn': _timesWorn});
+                      }
                     }),
                     SizedBox(
-                      width: 30,
+                      width: 40,
                       child: Text(
                         '$_timesWorn',
                         textAlign: TextAlign.center,
@@ -198,6 +302,7 @@ class _SelectedClothingItemScreenState
                     ),
                     _buildCounterButton(Icons.add, () {
                       setState(() => _timesWorn++);
+                      _updateField({'timesWorn': _timesWorn});
                     }),
                   ],
                 ),
@@ -473,6 +578,37 @@ class _SelectedClothingItemScreenState
     );
   }
 
+  void _showColorPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Select Color',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ColorPalettePicker(
+                selectedColor: Color(_primaryColorValue),
+                onColorSelected: (color) {
+                  setState(() {
+                    _primaryColorValue = color.value;
+                  });
+                  _updateField({'primaryColor': color.value});
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showSizePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -499,6 +635,7 @@ class _SelectedClothingItemScreenState
                   setState(() {
                     _size = size;
                   });
+                  _updateField({'size': size});
                   Navigator.pop(context);
                 },
               );

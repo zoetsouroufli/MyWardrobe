@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 class OneOutfitScreen extends StatefulWidget {
   final Map<String, dynamic> outfitData;
   final String? outfitId;
@@ -27,6 +30,27 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
       return List<String>.from(items);
     }
     return [];
+  }
+
+  Future<double> _calculateTotalPrice(List<String> items) async {
+    double total = 0.0;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || items.isEmpty) return 0.0;
+
+    final wardrobeRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('wardrobe');
+
+    // Query 1 by 1 for simplicity (batching whereIn limited to 10)
+    for (var path in items) {
+       final snapshot = await wardrobeRef.where('imageUrl', isEqualTo: path).limit(1).get();
+       if (snapshot.docs.isNotEmpty) {
+           final data = snapshot.docs.first.data();
+           total += (data['price'] as num?)?.toDouble() ?? 0.0;
+       }
+    }
+    return total;
   }
 
   void _moveItemToOutfit(String itemPath) {
@@ -131,12 +155,32 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
               // ===== TITLE =====
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Text(
-                  outfit['title'] ?? 'Outfit',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      outfit['title'] ?? 'Outfit',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FutureBuilder<double>(
+                      future: _calculateTotalPrice(currentItems),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+                        return Text(
+                          'Total Value: \$${snapshot.data!.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF9C27B0),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
