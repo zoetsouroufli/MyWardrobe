@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import '../screens/camera_screen.dart';
 import '../services/firestore_service.dart';
 
@@ -23,13 +24,55 @@ class AddNewItemButton extends StatelessWidget {
             return;
           }
 
-          final cameras = await availableCameras();
           if (!context.mounted) return;
-          
-          final imageUrl = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => CameraScreen(cameras: cameras)),
+
+          // Choice Dialog
+          final source = await showDialog<ImageSource>(
+            context: context,
+            builder: (ctx) => SimpleDialog(
+              title: const Text('Add Photo'),
+              children: [
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, ImageSource.camera),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Row(
+                       children: [Icon(Icons.camera_alt), SizedBox(width: 8), Text('Take Photo')],
+                    ),
+                  ),
+                ),
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(ctx, ImageSource.gallery),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Row(
+                       children: [Icon(Icons.photo_library), SizedBox(width: 8), Text('Pick from Gallery')],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
+          
+          if (source == null) return;
+
+          String? imageUrl;
+
+          if (source == ImageSource.camera) {
+             final cameras = await availableCameras();
+             if (!context.mounted) return;
+             imageUrl = await Navigator.push(
+               context,
+               MaterialPageRoute(builder: (_) => CameraScreen(cameras: cameras)),
+             );
+          } else {
+             // Gallery
+             final picker = ImagePicker();
+             final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+             if (pickedFile != null) {
+                imageUrl = pickedFile.path;
+             }
+          }
 
           if (imageUrl != null && context.mounted) {
             // Show Category Picker Dialog
@@ -44,7 +87,8 @@ class AddNewItemButton extends StatelessWidget {
                     'Hoodies',
                     'Jackets',
                     'Socks',
-                    'Shoes'
+                    'Shoes',
+                    'Accessories'
                   ].map((category) {
                     return SimpleDialogOption(
                       onPressed: () => Navigator.pop(context, category),

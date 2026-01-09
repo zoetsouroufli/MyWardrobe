@@ -70,7 +70,7 @@ class CategoryDropdownTile extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: images[index].startsWith('http')
+                        child: (images[index].startsWith('http') || images[index].startsWith('blob:'))
                             ? Image.network(
                                 images[index],
                                 fit: BoxFit.cover,

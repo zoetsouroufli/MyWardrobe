@@ -61,24 +61,42 @@ class ClothingCategoriesScreen extends StatelessWidget {
 
               // ===== ADD NEW ITEM BUTTON =====
               const AddNewItemButton(),
-
-              TextButton(
-                onPressed: () async {
-                  try {
-                    await FirestoreService().seedSampleData();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sample data loaded!')),
-                      );
-                    }
-                  } catch (e) {
-                    print(e);
-                  }
-                },
-                child: const Text(
-                  'Load Sample Data',
-                  style: TextStyle(color: Colors.grey),
-                ),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await FirestoreService().seedSampleData();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Sample data loaded!')),
+                          );
+                        }
+                      } catch (e) {
+                         print(e);
+                      }
+                    },
+                    child: const Text('Load Sample Data', style: TextStyle(color: Colors.green)),
+                  ),
+                  const SizedBox(width: 16),
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await FirestoreService().clearWardrobe();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Wardrobe cleared!')),
+                          );
+                        }
+                      } catch (e) {
+                         print(e);
+                      }
+                    },
+                    child: const Text('Clear Wardrobe', style: TextStyle(color: Colors.red)),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 30),
@@ -97,38 +115,34 @@ class ClothingCategoriesScreen extends StatelessWidget {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
+                  
+                  final docs = snapshot.data?.docs ?? [];
+                  print('StreamBuilder update: Found ${docs.length} wardrobe items.');
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    // Show empty tiles if no data
-                    return Column(
-                      children: const [
-                        CategoryDropdownTile(title: 'Pants'),
-                        CategoryDropdownTile(title: 'T-Shirts'),
-                        CategoryDropdownTile(title: 'Hoodies'),
-                        CategoryDropdownTile(title: 'Jackets'),
-                        CategoryDropdownTile(title: 'Socks'),
-                        CategoryDropdownTile(title: 'Shoes'),
-                        CategoryDropdownTile(title: 'Accessories'),
-                      ],
-                    );
+                  if (docs.isEmpty) {
+                     // Show empty tiles if no data
+                     return Column(
+                       children: const [
+                         CategoryDropdownTile(title: 'Pants'),
+                         CategoryDropdownTile(title: 'T-Shirts'),
+                         CategoryDropdownTile(title: 'Hoodies'),
+                         CategoryDropdownTile(title: 'Jackets'),
+                         CategoryDropdownTile(title: 'Socks'),
+                         CategoryDropdownTile(title: 'Shoes'),
+                         CategoryDropdownTile(title: 'Accessories'),
+                       ],
+                     );
                   }
-
-                  final docs = snapshot.data!.docs;
 
                   // Helper function to filter by category
                   List<String> getImagesFor(String category) {
                     return docs
-                        .where(
-                          (doc) =>
-                              (doc.data()
-                                  as Map<String, dynamic>)['category'] ==
-                              category,
-                        )
-                        .map(
-                          (doc) =>
-                              (doc.data() as Map<String, dynamic>)['imageUrl']
-                                  as String,
-                        )
+                        .map((doc) => doc.data() as Map<String, dynamic>?)
+                        .where((data) => 
+                            data != null && 
+                            data['category'] == category && 
+                            data['imageUrl'] != null)
+                        .map((data) => data!['imageUrl'] as String)
                         .toList();
                   }
 
