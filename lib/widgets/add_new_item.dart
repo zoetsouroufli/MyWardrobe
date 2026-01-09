@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/camera_screen.dart';
+import '../screens/upload_photo.dart';
 import '../services/firestore_service.dart';
 
 class AddNewItemButton extends StatelessWidget {
@@ -25,57 +26,20 @@ class AddNewItemButton extends StatelessWidget {
 
           final cameras = await availableCameras();
           if (!context.mounted) return;
-          
-          final imageUrl = await Navigator.push(
+
+          final imagePath = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => CameraScreen(cameras: cameras)),
           );
 
-          if (imageUrl != null && context.mounted) {
-            // Show Category Picker Dialog
-            String? selectedCategory = await showDialog<String>(
-              context: context,
-              builder: (context) {
-                return SimpleDialog(
-                  title: const Text('Select Category'),
-                  children: [
-                    'Pants',
-                    'T-Shirts',
-                    'Hoodies',
-                    'Jackets',
-                    'Socks',
-                    'Shoes'
-                  ].map((category) {
-                    return SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, category),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(category, style: const TextStyle(fontSize: 16)),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
+          if (imagePath != null && context.mounted) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    UploadPhotoScreen(imagePath: imagePath as String),
+              ),
             );
-
-            if (selectedCategory != null && context.mounted) {
-              // Save to Firestore
-              try {
-                await FirestoreService().addClothingItem({
-                  'imageUrl': imageUrl,
-                  'category': selectedCategory,
-                  'dateAdded': FieldValue.serverTimestamp(),
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Item added successfully!')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to save item: $e')),
-                );
-              }
-            }
           }
         },
         style: ElevatedButton.styleFrom(

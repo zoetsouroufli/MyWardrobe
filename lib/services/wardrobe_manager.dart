@@ -19,7 +19,12 @@ class WardrobeManager {
         // Handle migration: if list of strings, convert to maps
         if (jsonList.isNotEmpty && jsonList.first is String) {
           _items = jsonList
-              .map((e) => {'path': e as String, 'category': 'My Uploads'})
+              .map(
+                (e) => <String, dynamic>{
+                  'path': e as String,
+                  'category': 'My Uploads',
+                },
+              )
               .toList();
         } else {
           _items = jsonList.cast<Map<String, dynamic>>();
@@ -48,7 +53,7 @@ class WardrobeManager {
     await File(tempPath).copy(permPath);
 
     // Add to list
-    _items.add({
+    _items.add(<String, dynamic>{
       'path': permPath,
       'category': category,
       'date': DateTime.now().toIso8601String(),

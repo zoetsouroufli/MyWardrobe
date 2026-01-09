@@ -6,12 +6,14 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/back_button.dart';
 import 'clothing_categories.dart';
 import 'selected_clothing_item.dart';
 import '../services/background_remover.dart';
 import '../services/firestore_service.dart';
 import '../services/image_classifier.dart';
+import '../services/wardrobe_manager.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
   final String imagePath;
@@ -47,16 +49,24 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     _autoClassify();
   }
 
-  Future<void> _autoClassify() async {
+  Future<void> _autoClassify([String? path]) async {
     if (kIsWeb) return;
-    final category = await ImageClassifier().classifyImage(widget.imagePath);
-    if (category != null && mounted) {
-      setState(() {
-        _selectedCategory = category;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Auto-detected: $category')));
+    final targetPath = path ?? widget.imagePath;
+
+    // Skip if classifying the same image again unless it's isolated which might give better results
+
+    try {
+      final category = await ImageClassifier().classifyImage(targetPath);
+      if (category != null && mounted) {
+        setState(() {
+          _selectedCategory = category;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Auto-detected: $category')));
+      }
+    } catch (e) {
+      print('Auto-classify error: $e');
     }
   }
 
@@ -72,13 +82,15 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         _isIsolating = false;
         if (resultPath != null) {
           _displayImagePath = resultPath;
+          // Trigger auto-classify on the new isolated image
+          _autoClassify(resultPath);
         }
       });
 
       String message = kIsWeb
           ? 'Background removal simulated (Web fallback)'
           : (resultPath != widget.imagePath
-                ? 'Subject Isolated!'
+                ? 'Subject Isolated! Re-checking category...'
                 : 'No subject found.');
 
       ScaffoldMessenger.of(
@@ -130,45 +142,70 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       }
     }
 
-    // 2. Upload to Firebase Storage and Save to Firestore
+    // 2. Save Locally First (Offline-First Strategy)
     try {
-      String imageUrl = finalPath;
+      // Save locally using WardrobeManager
+      final savedPath = await WardrobeManager().saveImagePermanent(
+        finalPath,
+        category: _selectedCategory,
+      );
 
+      if (mounted) {
+        // Show success immediately for local save?
+        // Or wait for upload? User said "save locally ... and then upload"
+        // If we navigate now, upload happens in background?
+        // Safest is to try upload but catch error and just show warning if fails, but proceed.
+      }
+
+      // 3. Upload to Firebase (Background / Attempt)
       if (!kIsWeb) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          throw Exception('User not logged in');
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final fileName = p.basename(savedPath); // Use saved path name
+            final storagePath = 'users/${user.uid}/wardrobe/$fileName';
+            print('Attempting to upload to: $storagePath');
+
+            final ref = FirebaseStorage.instance.ref().child(storagePath);
+            final file = File(savedPath);
+            final bytes = await file.readAsBytes();
+            print('File size: ${bytes.length} bytes');
+
+            await ref.putData(bytes);
+            final imageUrl = await ref.getDownloadURL();
+
+            await FirestoreService().addClothingItem({
+              'imageUrl': imageUrl,
+              'category': _selectedCategory,
+              'brand': _brandController.text,
+              'dateAdded': FieldValue.serverTimestamp(),
+            });
+          }
+        } catch (uploadError) {
+          print('Upload failed but local save succeeded: $uploadError');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Saved locally, but upload failed: $uploadError'),
+              ),
+            );
+          }
+          // We still proceed because local saveworked
         }
-
-        final fileName =
-            '${DateTime.now().millisecondsSinceEpoch}_${p.basename(finalPath)}';
-        final ref = FirebaseStorage.instance.ref().child(
-          'users/${user.uid}/wardrobe/$fileName',
-        );
-
-        final file = File(finalPath);
-        await ref.putFile(file);
-        imageUrl = await ref.getDownloadURL();
-
-        // Save metadata to Firestore
-        await FirestoreService().addClothingItem({
-          'imageUrl': imageUrl,
-          'category': _selectedCategory,
-          'brand': _brandController.text,
-          'dateAdded': FieldValue.serverTimestamp(),
-        });
       }
 
       if (mounted) {
-        Navigator.push(
-          context,
+        // Navigate to categories (or selected item)
+        // Since we have local list, we can just go back to categories to see it
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) =>
-                SelectedClothingItemScreen(imagePath: imageUrl),
+            builder: (context) => const ClothingCategoriesScreen(),
           ),
+          (route) => false,
         );
       }
     } catch (e) {
+      print('Full Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,

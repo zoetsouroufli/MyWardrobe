@@ -5,12 +5,31 @@ import '../widgets/bottom_nav.dart';
 import '../widgets/category_dropdown.dart';
 import '../widgets/add_new_item.dart';
 import '../services/firestore_service.dart';
+import '../services/wardrobe_manager.dart'; // Added import for WardrobeManager
 import 'home_screen.dart';
 import 'stats.dart';
 import 'my_outfits.dart';
+import '../services/wardrobe_manager.dart';
 
-class ClothingCategoriesScreen extends StatelessWidget {
+class ClothingCategoriesScreen extends StatefulWidget {
   const ClothingCategoriesScreen({super.key});
+
+  @override
+  State<ClothingCategoriesScreen> createState() =>
+      _ClothingCategoriesScreenState();
+}
+
+class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _initWardrobe();
+  }
+
+  Future<void> _initWardrobe() async {
+    await WardrobeManager().init();
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,30 +113,13 @@ class ClothingCategoriesScreen extends StatelessWidget {
                           .snapshots()
                     : const Stream.empty(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  // We always show tiles, even if waiting, to show local items if available
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    // Show empty tiles if no data
-                    return Column(
-                      children: const [
-                        CategoryDropdownTile(title: 'Pants'),
-                        CategoryDropdownTile(title: 'T-Shirts'),
-                        CategoryDropdownTile(title: 'Hoodies'),
-                        CategoryDropdownTile(title: 'Jackets'),
-                        CategoryDropdownTile(title: 'Socks'),
-                        CategoryDropdownTile(title: 'Shoes'),
-                        CategoryDropdownTile(title: 'Accessories'),
-                      ],
-                    );
-                  }
-
-                  final docs = snapshot.data!.docs;
+                  final docs = snapshot.hasData ? snapshot.data!.docs : [];
 
                   // Helper function to filter by category
                   List<String> getImagesFor(String category) {
-                    return docs
+                    final remote = docs
                         .where(
                           (doc) =>
                               (doc.data()
@@ -130,6 +132,12 @@ class ClothingCategoriesScreen extends StatelessWidget {
                                   as String,
                         )
                         .toList();
+
+                    final local = WardrobeManager().getItemsByCategory(
+                      category,
+                    );
+
+                    return [...local, ...remote];
                   }
 
                   return Column(
