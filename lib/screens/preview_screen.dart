@@ -2,8 +2,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart'; // for XFile
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PreviewScreen extends StatefulWidget {
   final XFile imageFile; // Changed from String path to XFile
@@ -17,39 +18,33 @@ class PreviewScreen extends StatefulWidget {
 class _PreviewScreenState extends State<PreviewScreen> {
   bool _isUploading = false;
 
-  Future<void> _saveImageLocally() async {
-    if (kIsWeb) {
-      // On web we cannot save to "documents directory" easily.
-      // We could trigger a download, but for now let's just show a message.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Local save not fully supported on Web yet.')),
-      );
-      Navigator.pop(context, widget.imageFile.path);
-      return;
-    }
-
+  Future<void> _uploadImage() async {
     setState(() {
       _isUploading = true;
     });
 
     try {
-      // Get the directory to save the file permanently
-      final directory = await getApplicationDocumentsDirectory();
       final fileName = path.basename(widget.imageFile.path);
-      final newPath = path.join(directory.path, fileName);
+      // Need auth to get uid, can fallback to 'anonymous' if needed, but we have auth now
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_user';
+      final ref = FirebaseStorage.instance.ref().child('uploads/$uid/$fileName');
+      
+      // Universally compatible: read as bytes
+      final bytes = await widget.imageFile.readAsBytes();
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
 
-      // Copy the file from cache to documents
-      await widget.imageFile.saveTo(newPath);
+      await ref.putData(bytes, metadata);
+      final downloadUrl = await ref.getDownloadURL();
 
       if (!mounted) return;
       
-      // Return the local path
-      Navigator.pop(context, newPath);
+      // Return the cloud URL
+      Navigator.pop(context, downloadUrl);
 
     } catch (e) {
-      print('Error saving locally: $e');
+      print('Error uploading: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
+        SnackBar(content: Text('Failed to upload: $e')),
       );
     } finally {
       if (mounted) {
@@ -106,7 +101,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
 
                   // OK Button (Save)
                   TextButton(
-                    onPressed: _saveImageLocally,
+                    onPressed: _uploadImage,
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.all(15),
                       backgroundColor: Colors.white,
