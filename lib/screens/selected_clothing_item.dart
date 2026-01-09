@@ -1,6 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
-import 'my_outfits.dart';
 import 'add_new_outfit.dart';
 
 class SelectedClothingItemScreen extends StatefulWidget {
@@ -336,7 +337,7 @@ class _SelectedClothingItemScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        final Set<int> selectedIndices = {};
+        final Set<String> selectedDocIds = {};
 
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -356,34 +357,58 @@ class _SelectedClothingItemScreenState
                   ),
                   const SizedBox(height: 20),
 
-                  // List
+                  // StreamBuilder List
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: globalOutfits.length,
-                      itemBuilder: (context, index) {
-                        final outfit = globalOutfits[index];
-                        final isSelected = selectedIndices.contains(index);
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseAuth.instance.currentUser != null
+                          ? FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(FirebaseAuth.instance.currentUser!.uid)
+                              .collection('outfits')
+                              .orderBy('dateAdded', descending: true)
+                              .snapshots()
+                          : const Stream.empty(),
+                      builder: (context, snapshot) {
+                         if (!snapshot.hasData) {
+                           return const Center(child: CircularProgressIndicator());
+                         }
+                         
+                         final docs = snapshot.data!.docs;
 
-                        return CheckboxListTile(
-                          title: Text(
-                            outfit['title'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          value: isSelected,
-                          activeColor: const Color(0xFF9C27B0),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.trailing,
-                          onChanged: (bool? value) {
-                            setModalState(() {
-                              if (value == true) {
-                                selectedIndices.add(index);
-                              } else {
-                                selectedIndices.remove(index);
-                              }
-                            });
+                         if (docs.isEmpty) {
+                           return const Center(child: Text("No outfits found."));
+                         }
+
+                        return ListView.builder(
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final doc = docs[index];
+                            final outfit = doc.data() as Map<String, dynamic>;
+                            final title = outfit['title'] ?? 'Outfit';
+                            final isSelected = selectedDocIds.contains(doc.id);
+
+                            return CheckboxListTile(
+                              title: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              value: isSelected,
+                              activeColor: const Color(0xFF9C27B0),
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              onChanged: (bool? value) {
+                                setModalState(() {
+                                  if (value == true) {
+                                    selectedDocIds.add(doc.id);
+                                  } else {
+                                    selectedDocIds.remove(doc.id);
+                                  }
+                                });
+                              },
+                            );
                           },
                         );
                       },
@@ -396,12 +421,31 @@ class _SelectedClothingItemScreenState
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        final selectedTitles = selectedIndices
-                            .map((i) => globalOutfits[i]['title'])
-                            .toList();
-                        print('Added to outfits: $selectedTitles');
-                        Navigator.pop(context);
+                      onPressed: () async {
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null && selectedDocIds.isNotEmpty) {
+                          final batch = FirebaseFirestore.instance.batch();
+                          for (var docId in selectedDocIds) {
+                            final ref = FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(uid)
+                                .collection('outfits')
+                                .doc(docId);
+                            batch.update(ref, {
+                              'items': FieldValue.arrayUnion([widget.imagePath])
+                            });
+                          }
+                          await batch.commit();
+                          
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Added to outfits!')),
+                            );
+                            Navigator.pop(context);
+                          }
+                        } else {
+                           Navigator.pop(context);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF9C27B0),
