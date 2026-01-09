@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/outfit_view.dart';
+import '../widgets/back_button.dart';
 
 class FriendOutfitScreen extends StatelessWidget {
   const FriendOutfitScreen({super.key});
@@ -7,36 +7,82 @@ class FriendOutfitScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F5),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
 
-            // ===== TITLE =====
-            const Text(
-              'friend outfit',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+            // Header with back button and logo
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: BackButtonCircle(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                  Image.asset(
+                    'assets/MyWardrobe.png',
+                    width: 150,
+                    fit: BoxFit.contain,
+                  ),
+                ],
+              ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 40),
 
-            // ===== CARD =====
+            // Outfit Items Grid
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const OutfitView(
-                  isOwner: false,        // ❌ όχι δικό μου
-                  showAddSection: false, // ❌ όχι Add
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 20,
+                  childAspectRatio: 0.85,
+                  children: [
+                    _buildClothingItem('assets/jeans.png.avif'),
+                    _buildClothingItem('assets/tshirt.png.jpg'),
+                    _buildClothingItem('assets/outfit_sneakers.jpg'),
+                    _buildClothingItem('assets/sweater2.png.jpg'),
+                    _buildClothingItem('assets/outfit_jacket.jpg'),
+                  ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClothingItem(String imagePath) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.checkroom, size: 40, color: Colors.grey),
+            );
+          },
         ),
       ),
     );

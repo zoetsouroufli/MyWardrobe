@@ -26,10 +26,8 @@ class AddNewItemButton extends StatelessWidget {
           }
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepPurpleAccent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          backgroundColor: const Color(0xFF9C27B0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 14),
         ),
         child: const Text(
@@ -38,9 +36,9 @@ class AddNewItemButton extends StatelessWidget {
             fontSize: 16,
             color: Colors.white,
             fontWeight: FontWeight.w500,
+          ),
         ),
       ),
-    ),
     );
   }
 }
