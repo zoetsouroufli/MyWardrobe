@@ -2,9 +2,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
-  final _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String get uid => FirebaseAuth.instance.currentUser!.uid;
+
+  Future<void> seedDummyUser() async {
+    try {
+      // Create a dummy user in 'users' collection
+      await _db.collection('users').doc('dummy_user_1').set({
+        'username': 'testuser',
+        'description': 'I am a test user for searching.',
+        'email': 'test@example.com',
+      });
+      print('Dummy user created!');
+    } catch (e) {
+      print('Error seeding dummy user: $e');
+    }
+  }
 
   Future<void> addClothingItem(Map<String, dynamic> data) async {
     await _db

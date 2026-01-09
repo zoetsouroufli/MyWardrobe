@@ -130,31 +130,54 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                 const SizedBox(height: 40),
 
                 // ===== SECTION TITLE & SUBTITLE =====
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'H ZOI KAI TA OUTFITS TIS',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900, // Extra Bold
-                          color: Colors.black, // Explicit BLACK
-                          letterSpacing: 0.5,
-                        ),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseAuth.instance.currentUser != null
+                      ? FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(FirebaseAuth.instance.currentUser!.uid)
+                          .snapshots()
+                      : const Stream.empty(),
+                  builder: (context, snapshot) {
+                     String username = 'H ZOI KAI TA OUTFITS TIS';
+                     String description = 'letsgooooo';
+
+                     if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+                       final data = snapshot.data!.data() as Map<String, dynamic>;
+                       if (data.containsKey('username') && data['username'].toString().isNotEmpty) {
+                         username = data['username'];
+                       }
+                       if (data.containsKey('description') && data['description'].toString().isNotEmpty) {
+                         description = data['description'];
+                       }
+                     }
+
+                     return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            username,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900, // Extra Bold
+                              color: Colors.black, // Explicit BLACK
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            description,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'letsgooooo',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  }
                 ),
 
                 const SizedBox(height: 16),
