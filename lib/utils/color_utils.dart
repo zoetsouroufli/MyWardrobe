@@ -24,6 +24,17 @@ class ColorUtils {
     'Violet': Color(0xFFEE82EE),
     'Gold': Color(0xFFFFD700),
     'Silver': Color(0xFFC0C0C0),
+    'Mint': Color(0xFF98FF98),
+    'Coral': Color(0xFFFF7F50),
+    'Mustard': Color(0xFFFFDB58),
+    'Khaki': Color(0xFFF0E68C),
+    'Cream': Color(0xFFFFFDD0),
+    'Charcoal': Color(0xFF36454F),
+    'Burgundy': Color(0xFF800020),
+    'Indigo': Color(0xFF4B0082),
+    'Turquoise': Color(0xFF40E0D0),
+    'Peach': Color(0xFFFFE5B4),
+    'Tan': Color(0xFFD2B48C),
   };
 
   static String getColorName(Color color) {

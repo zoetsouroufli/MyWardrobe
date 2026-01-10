@@ -611,6 +611,9 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                 onColorSelected: (color) {
                   setState(() {
                     _primaryColorValue = color.value;
+                    _colorNameController.text = ColorUtils.getColorName(
+                      color,
+                    ); // Fix: Sync name
                   });
                   Navigator.pop(context);
                 },
