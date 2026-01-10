@@ -116,10 +116,6 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                   }
 
                   final docs = snapshot.data!.docs;
-                  print('DEBUG: Categories Screen loaded ${docs.length} items.');
-                  for (var d in docs) {
-                     // print('DEBUG: Item ${d.id} - Cat: ${d['category']} - Date: ${d.data().toString().contains('dateAdded') ? 'Yes' : 'No'}');
-                  }
                   
                   // Sort client-side to handle missing dateAdded fields
                   docs.sort((a, b) {

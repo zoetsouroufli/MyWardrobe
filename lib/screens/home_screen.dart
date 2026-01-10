@@ -196,28 +196,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final filteredDocs = docs.where((doc) => doc.id != FirebaseAuth.instance.currentUser?.uid).toList();
 
         if (filteredDocs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('No user found with that username.'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () async {
-                    await FirestoreService().seedDummyUser();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Created "testuser"! Try searching again.')),
-                    );
-                    // Force rebuild/re-search if needed, but stream should handle it
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Create "testuser"'),
-                ),
-              ],
-            ),
+          return const Center(
+            child: Text('No user found with that username.'),
           );
         }
 
