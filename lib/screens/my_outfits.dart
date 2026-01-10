@@ -17,7 +17,6 @@ class MyOutfitsScreen extends StatefulWidget {
 }
 
 class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,57 +126,100 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
 
                 // ===== SECTION TITLE & SUBTITLE =====
                 StreamBuilder<DocumentSnapshot>(
                   stream: FirebaseAuth.instance.currentUser != null
                       ? FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(FirebaseAuth.instance.currentUser!.uid)
-                          .snapshots()
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser!.uid)
+                            .snapshots()
                       : const Stream.empty(),
                   builder: (context, snapshot) {
-                     String username = 'H ZOI KAI TA OUTFITS TIS';
-                     String description = 'letsgooooo';
+                    String username = 'My Username';
+                    String description = 'My description';
+                    String? avatarUrl;
 
-                     if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
-                       final data = snapshot.data!.data() as Map<String, dynamic>;
-                       if (data.containsKey('username') && data['username'].toString().isNotEmpty) {
-                         username = data['username'];
-                       }
-                       if (data.containsKey('description') && data['description'].toString().isNotEmpty) {
-                         description = data['description'];
-                       }
-                     }
+                    if (snapshot.hasData &&
+                        snapshot.data != null &&
+                        snapshot.data!.exists) {
+                      final data =
+                          snapshot.data!.data() as Map<String, dynamic>;
+                      if (data.containsKey('username') &&
+                          data['username'].toString().isNotEmpty) {
+                        username = data['username'];
+                      }
+                      if (data.containsKey('description') &&
+                          data['description'].toString().isNotEmpty) {
+                        description = data['description'];
+                      }
+                      avatarUrl = data['avatarUrl'];
+                    }
 
-                     return Align(
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(
+                          40,
+                        ), // Slightly smaller radius
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            username,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900, // Extra Bold
-                              color: Colors.black, // Explicit BLACK
-                              letterSpacing: 0.5,
-                            ),
+                          CircleAvatar(
+                            radius: 24, // Smaller avatar 24
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage: avatarUrl != null
+                                ? NetworkImage(avatarUrl)
+                                : null,
+                            child: avatarUrl == null
+                                ? const Icon(
+                                    Icons.person,
+                                    color: Colors.grey,
+                                    size: 24,
+                                  )
+                                : null,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            description,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w400,
+                          const SizedBox(width: 12), // Tighter gap
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  username,
+                                  style: const TextStyle(
+                                    fontSize: 16, // Smaller font
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  description,
+                                  style: TextStyle(
+                                    fontSize: 13, // Smaller font
+                                    color: Colors.grey[600],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     );
-                  }
+                  },
                 ),
 
                 const SizedBox(height: 16),
@@ -186,11 +228,11 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                 StreamBuilder<QuerySnapshot>(
                   stream: FirebaseAuth.instance.currentUser != null
                       ? FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(FirebaseAuth.instance.currentUser!.uid)
-                          .collection('outfits')
-                          .orderBy('dateAdded', descending: true)
-                          .snapshots()
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser!.uid)
+                            .collection('outfits')
+                            .orderBy('dateAdded', descending: true)
+                            .snapshots()
                       : const Stream.empty(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -225,7 +267,8 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                       itemBuilder: (context, index) {
                         final doc = docs[index];
                         final outfit = doc.data() as Map<String, dynamic>;
-                        final colorValue = outfit['color'] as int? ?? 0xFFCCCCCC;
+                        final colorValue =
+                            outfit['color'] as int? ?? 0xFFCCCCCC;
 
                         return _OutfitCard(
                           color: Color(colorValue),
@@ -233,32 +276,31 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
                           subtitle: outfit['subtitle'] ?? '',
                           likes: outfit['likes'] ?? 0,
                           onTap: () async {
-                              // Navigate to OneOutfitScreen
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      OneOutfitScreen(
-                                        outfitData: outfit,
-                                        outfitId: doc.id,
-                                      ),
+                            // Navigate to OneOutfitScreen
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OneOutfitScreen(
+                                  outfitData: outfit,
+                                  outfitId: doc.id,
                                 ),
-                              );
+                              ),
+                            );
 
-                              // Check if deleted
-                              if (result == 'deleted') {
-                                // Delete from firestore
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(FirebaseAuth.instance.currentUser!.uid)
-                                    .collection('outfits')
-                                    .doc(doc.id)
-                                    .delete();
-                                    
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Outfit deleted')),
-                                );
-                              }
+                            // Check if deleted
+                            if (result == 'deleted') {
+                              // Delete from firestore
+                              await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                                  .collection('outfits')
+                                  .doc(doc.id)
+                                  .delete();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Outfit deleted')),
+                              );
+                            }
                           },
                         );
                       },

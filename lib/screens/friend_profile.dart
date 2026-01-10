@@ -57,36 +57,41 @@ class FriendProfileScreen extends StatelessWidget {
             // Profile Card
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 40),
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(50),
+                borderRadius: BorderRadius.circular(
+                  40,
+                ), // Slightly smaller radius
                 border: Border.all(color: Colors.grey.shade300, width: 2),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 30,
+                    radius: 24, // Smaller avatar
                     backgroundImage: friendPhoto.startsWith('http')
                         ? NetworkImage(friendPhoto)
                         : AssetImage(friendPhoto) as ImageProvider,
                     backgroundColor: Colors.grey,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12), // Tighter gap
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         friendName,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 16, // Smaller font
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
                       Text(
                         friendUsername,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ), // Smaller font
                       ),
                     ],
                   ),
@@ -127,7 +132,9 @@ class FriendProfileScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () async {
-                                await FirestoreService().seedFriendOutfits(friendDocId);
+                              await FirestoreService().seedFriendOutfits(
+                                friendDocId,
+                              );
                             },
                             child: const Text('Load Sample Outfits'),
                           ),
@@ -138,22 +145,23 @@ class FriendProfileScreen extends StatelessWidget {
 
                   return GridView.builder(
                     padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.75,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                        ),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        final colorValue = data['color'] as int? ?? 0xFFCCCCCC;
-                        return OutfitCard(
-                            color: Color(colorValue),
-                            title: data['title'] ?? '',
-                            description: data['description'] ?? '',
-                            initialLikes: data['likes'] ?? 0,
-                        );
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      final colorValue = data['color'] as int? ?? 0xFFCCCCCC;
+                      return OutfitCard(
+                        color: Color(colorValue),
+                        title: data['title'] ?? '',
+                        description: data['description'] ?? '',
+                        initialLikes: data['likes'] ?? 0,
+                      );
                     },
                   );
                 },

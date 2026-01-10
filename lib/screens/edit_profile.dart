@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../widgets/back_button.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -14,6 +17,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   bool _isLoading = false;
+  File? _imageFile;
+  String? _currentAvatarUrl;
 
   @override
   void initState() {
@@ -27,16 +32,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         _usernameController.text = data['username'] ?? '';
         _descriptionController.text = data['description'] ?? '';
+        _currentAvatarUrl = data['avatarUrl'];
       }
     } catch (e) {
       print('Error loading user data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
     }
   }
 
@@ -46,23 +66,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
+      String? newAvatarUrl = _currentAvatarUrl;
+
+      // 1. Upload new image if selected
+      if (_imageFile != null) {
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('users')
+            .child(uid)
+            .child('profile_pic.jpg');
+
+        await ref.putFile(_imageFile!);
+        newAvatarUrl = await ref.getDownloadURL();
+      }
+
+      // 2. Update Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'username': _usernameController.text.trim(),
         'description': _descriptionController.text.trim(),
+        if (newAvatarUrl != null) 'avatarUrl': newAvatarUrl,
       }, SetOptions(merge: true));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile updated!')));
         Navigator.pop(context);
       }
     } catch (e) {
       print('Error saving user data: $e');
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -134,8 +170,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ],
                 ),
-                child: _isLoading 
-                    ? const Center(child: CircularProgressIndicator()) 
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
                     : SingleChildScrollView(
                         child: Column(
                           children: [
@@ -150,9 +186,64 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ),
                             ),
                             const SizedBox(height: 30),
-                  
+
+                            // Profile Picture Picker
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: Stack(
+                                alignment: Alignment.bottomRight,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: Colors.grey[200],
+                                    backgroundImage: _imageFile != null
+                                        ? FileImage(_imageFile!)
+                                        : (_currentAvatarUrl != null
+                                                  ? NetworkImage(
+                                                      _currentAvatarUrl!,
+                                                    )
+                                                  : null)
+                                              as ImageProvider?,
+                                    child:
+                                        (_imageFile == null &&
+                                            _currentAvatarUrl == null)
+                                        ? const Icon(
+                                            Icons.person,
+                                            size: 50,
+                                            color: Colors.grey,
+                                          )
+                                        : null,
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFD01FE8),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Change profile picture',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24.0,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -169,10 +260,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     controller: _usernameController,
                                     keyboardType: TextInputType.text,
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         borderSide: BorderSide(
@@ -187,9 +279,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       ),
                                     ),
                                   ),
-                  
+
                                   const SizedBox(height: 24),
-                  
+
                                   // New Description
                                   const Text(
                                     'new description',
@@ -203,10 +295,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     controller: _descriptionController,
                                     keyboardType: TextInputType.text,
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         borderSide: BorderSide(
@@ -221,9 +314,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       ),
                                     ),
                                   ),
-                  
+
                                   const SizedBox(height: 30),
-                  
+
                                   // Ready Button
                                   SizedBox(
                                     width: double.infinity,
@@ -238,7 +331,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           vertical: 16,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         elevation: 0,
                                       ),
@@ -257,7 +352,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ],
                         ),
-                ),
+                      ),
               ),
             ),
             const SizedBox(height: 20),
