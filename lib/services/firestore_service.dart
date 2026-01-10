@@ -524,6 +524,21 @@ class FirestoreService {
       final hash =
           doc.id.codeUnits.fold(0, (p, c) => p + c) + _random + counter;
 
+      final data = doc.data();
+      
+      // 1. Backfill Category if missing
+      String currentCategory = (data['category'] ?? '').toString();
+      if (currentCategory.isEmpty) {
+        currentCategory = 'Other';
+      }
+
+      // 2. Backfill DateAdded if missing
+      // We'll use a slightly randomized past timestamp if it's missing so they don't all look identical
+      FieldValue? dateAddedUpdate;
+      if (!data.containsKey('dateAdded') || data['dateAdded'] == null) {
+         dateAddedUpdate = FieldValue.serverTimestamp();
+      }
+
       final randomPrice = 10 + (hash % 90); // 10 - 100
       final randomWorn = hash % 25; // 0 - 24
       final randomBrand = brands[hash % brands.length];
@@ -533,21 +548,168 @@ class FirestoreService {
       final randomColorName = colorNames[randomColorIndex % colorNames.length];
       final isInOutfit = (hash % 3 == 0); // 33% chance
 
-      batch.update(doc.reference, {
-        'price': randomPrice.toDouble(),
-        'timesWorn': randomWorn,
-        'brand': randomBrand,
-        'size': randomSize,
-        'primaryColor': randomColor,
-        'colorName': randomColorName,
-        'isInOutfit': isInOutfit,
-        // Ensure other fields exist
-        'notes': doc.data().containsKey('notes') ? doc.data()['notes'] : '',
-      });
+      final updateData = {
+        'price': (data['price'] ?? randomPrice).toDouble(),
+        'timesWorn': data['timesWorn'] ?? randomWorn,
+        'brand': data['brand'] ?? randomBrand,
+        'size': data['size'] ?? randomSize,
+        'primaryColor': data['primaryColor'] ?? randomColor,
+        'colorName': data['colorName'] ?? randomColorName,
+        'isInOutfit': data['isInOutfit'] ?? isInOutfit,
+        'category': currentCategory, // Ensure valid category
+        'notes': data['notes'] ?? '',
+      };
+
+      if (dateAddedUpdate != null) {
+        updateData['dateAdded'] = dateAddedUpdate;
+        updateData['monthAdded'] = DateTime.now().month; // Approximate
+      }
+
+      batch.update(doc.reference, updateData);
     }
 
     await batch.commit();
-    print('Migration complete: ${snapshot.docs.length} items updated.');
+    print('Migration from existing wardrobe complete: ${snapshot.docs.length} items updated.');
+
+    // =========================================================================
+    // PART 2: GHOST ITEM RECOVERY
+    // Scan all outfits to find items that don't exist in the wardrobe anymore
+    // =========================================================================
+    
+    final outfitsSnapshot = await _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('outfits')
+        .get();
+
+    final wardrobeSnapshotForCheck = await wardrobeRef.get();
+    final Set<String> existingImageUrls = wardrobeSnapshotForCheck.docs
+        .map((d) => (d.data()['imageUrl'] as String?) ?? '')
+        .toSet();
+
+    final batch2 = _db.batch();
+    int recoveredCount = 0;
+
+    for (var outfitDoc in outfitsSnapshot.docs) {
+      final items = outfitDoc.data()['items'] as List<dynamic>?;
+      if (items == null) continue;
+
+      for (var itemPath in items) {
+        final path = itemPath.toString();
+        // If this image path is NOT in our wardrobe, we need to recover it
+        if (path.isNotEmpty && !existingImageUrls.contains(path)) {
+           // Create a new doc
+           final newDocRef = wardrobeRef.doc();
+           
+           // Enhanced category detection based on filename/URL keywords
+           String recoveredCategory = 'Accessories'; // Default fallback
+           final pathLower = path.toLowerCase();
+           
+           if (pathLower.contains('pant') || pathLower.contains('jean') || 
+               pathLower.contains('short') || pathLower.contains('trouser')) {
+             recoveredCategory = 'Pants';
+           } else if (pathLower.contains('shirt') || pathLower.contains('tee') || 
+                      pathLower.contains('top') || pathLower.contains('blouse')) {
+             recoveredCategory = 'T-Shirts';
+           } else if (pathLower.contains('sweater') || pathLower.contains('hoodie') || 
+                      pathLower.contains('pullover') || pathLower.contains('sweatshirt')) {
+             recoveredCategory = 'Hoodies';
+           } else if (pathLower.contains('jacket') || pathLower.contains('coat') || 
+                      pathLower.contains('blazer')) {
+             recoveredCategory = 'Jackets';
+           } else if (pathLower.contains('shoe') || pathLower.contains('sneaker') || 
+                      pathLower.contains('boot') || pathLower.contains('sandal')) {
+             recoveredCategory = 'Shoes';
+           } else if (pathLower.contains('sock')) {
+             recoveredCategory = 'Socks';
+           }
+           
+           batch2.set(newDocRef, {
+             'imageUrl': path,
+             'category': recoveredCategory,
+             'dateAdded': FieldValue.serverTimestamp(),
+             'monthAdded': DateTime.now().month,
+             'isInOutfit': true,
+             'price': 0,
+             'notes': 'Auto-recovered from outfit',
+             'timesWorn': 1,
+             'brand': 'Unknown',
+             'size': 'M',
+             'primaryColor': 0xFF9E9E9E,
+             'colorName': 'Grey'
+           });
+           
+           // Add to set to prevent duplicate recovery in same run
+           existingImageUrls.add(path);
+           recoveredCount++;
+        }
+      }
+    }
+
+    if (recoveredCount > 0) {
+      await batch2.commit();
+      print('Recovered $recoveredCount ghost items from outfits!');
+    }
+
+    // =========================================================================
+    // PART 3: CLEANUP & RECATEGORIZATION
+    // Fix existing "Recovered" items and remove invalid paths on Web
+    // =========================================================================
+    
+    final finalSnapshot = await wardrobeRef.get();
+    final batch3 = _db.batch();
+    int recategorizedCount = 0;
+    int deletedCount = 0;
+
+    for (var doc in finalSnapshot.docs) {
+      final data = doc.data();
+      final category = (data['category'] ?? '').toString();
+      final imageUrl = (data['imageUrl'] ?? '').toString();
+      
+      // Delete items with invalid paths on Web (local file paths)
+      if (kIsWeb && imageUrl.isNotEmpty && 
+          !imageUrl.startsWith('http') && 
+          !imageUrl.startsWith('assets/') &&
+          !imageUrl.startsWith('blob:')) {
+        batch3.delete(doc.reference);
+        deletedCount++;
+        continue;
+      }
+      
+      // Recategorize items still marked as "Recovered"
+      if (category == 'Recovered') {
+        String newCategory = 'Accessories';
+        final pathLower = imageUrl.toLowerCase();
+        
+        if (pathLower.contains('pant') || pathLower.contains('jean') || 
+            pathLower.contains('short') || pathLower.contains('trouser')) {
+          newCategory = 'Pants';
+        } else if (pathLower.contains('shirt') || pathLower.contains('tee') || 
+                   pathLower.contains('top') || pathLower.contains('blouse')) {
+          newCategory = 'T-Shirts';
+        } else if (pathLower.contains('sweater') || pathLower.contains('hoodie') || 
+                   pathLower.contains('pullover') || pathLower.contains('sweatshirt')) {
+          newCategory = 'Hoodies';
+        } else if (pathLower.contains('jacket') || pathLower.contains('coat') || 
+                   pathLower.contains('blazer')) {
+          newCategory = 'Jackets';
+        } else if (pathLower.contains('shoe') || pathLower.contains('sneaker') || 
+                   pathLower.contains('boot') || pathLower.contains('sandal')) {
+          newCategory = 'Shoes';
+        } else if (pathLower.contains('sock')) {
+          newCategory = 'Socks';
+        }
+        
+        batch3.update(doc.reference, {'category': newCategory});
+        recategorizedCount++;
+      }
+    }
+
+    if (recategorizedCount > 0 || deletedCount > 0) {
+      await batch3.commit();
+      if (recategorizedCount > 0) print('Recategorized $recategorizedCount "Recovered" items.');
+      if (deletedCount > 0) print('Deleted $deletedCount invalid items (Web incompatible paths).');
+    }
   }
 
   Future<void> updateClothingItem(
