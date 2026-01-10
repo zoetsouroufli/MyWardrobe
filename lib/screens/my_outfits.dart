@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/smooth_page_route.dart';
 import 'edit_profile.dart';
 import 'one_outfit.dart';
 import 'home_screen.dart';
@@ -41,10 +42,7 @@ class _MyOutfitsScreenState extends State<MyOutfitsScreen> {
           }
           Navigator.pushReplacement(
             context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => screen,
-              transitionDuration: Duration.zero,
-            ),
+            SmoothPageRoute(page: screen),
           );
         },
       ),
@@ -337,11 +335,24 @@ class _OutfitCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF9C27B0),
-          width: 1.5,
-        ), // Purple border
+          color: const Color(0xFF9C27B0).withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
