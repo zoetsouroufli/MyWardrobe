@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../widgets/back_button.dart';
 import '../services/firestore_service.dart';
 
@@ -372,6 +373,113 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     }, 
                                     icon: const Icon(Icons.build, color: Colors.grey),
                                     label: const Text('Fix Legacy Data', style: TextStyle(color: Colors.grey)),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  
+                                  // Backup & Clear Button
+                                  TextButton.icon(
+                                    onPressed: () async {
+                                      // Confirm dialog
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Backup & Clear Wardrobe'),
+                                          content: const Text(
+                                            'This will:\n'
+                                            '1. Save all items to backup\n'
+                                            '2. Clear your wardrobe\n\n'
+                                            'You can restore later with ML Kit auto-categories.\n\n'
+                                            'Continue?'
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Backup & Clear', style: TextStyle(color: Colors.orange)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      
+                                      if (confirm != true) return;
+                                      
+                                      setState(() => _isLoading = true);
+                                      try {
+                                        await FirestoreService().exportWardrobeToBackup();
+                                        await FirestoreService().clearWardrobe();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('✅ Backup saved & wardrobe cleared!')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Error: $e')),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _isLoading = false);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.backup, color: Colors.orange),
+                                    label: const Text('Backup & Clear Wardrobe', style: TextStyle(color: Colors.orange)),
+                                  ),
+                                  
+                                  const SizedBox(height: 12),
+                                  
+                                  // Restore with ML Kit Button
+                                  TextButton.icon(
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Restore from Backup'),
+                                          content: Text(
+                                            kIsWeb 
+                                              ? 'This will restore items from backup.\n\n'
+                                                '⚠️ ML Kit auto-categorization only works on mobile.'
+                                              : 'This will restore items from backup.\n\n'
+                                                '🤖 ML Kit will auto-detect categories on mobile!'
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Restore', style: TextStyle(color: Colors.green)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      
+                                      if (confirm != true) return;
+                                      
+                                      setState(() => _isLoading = true);
+                                      try {
+                                        await FirestoreService().restoreFromBackupWithMLKit();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('✅ Wardrobe restored!')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Error: $e')),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _isLoading = false);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.restore, color: Colors.green),
+                                    label: const Text('Restore with ML Kit', style: TextStyle(color: Colors.green)),
                                   ),
                                   const SizedBox(height: 20),
                                 ],
