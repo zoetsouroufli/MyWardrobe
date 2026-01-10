@@ -10,6 +10,11 @@ import '../widgets/barchart.dart';
 import '../widgets/info_bars.dart';
 import '../widgets/card_decoration.dart';
 
+import '../widgets/bottom_nav.dart';
+import 'home_screen.dart';
+import 'clothing_categories.dart';
+import 'my_outfits.dart';
+
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
 
@@ -17,6 +22,33 @@ class StatsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      bottomNavigationBar: BottomNav(
+        selectedIndex: 1,
+        onTap: (index) {
+          if (index == 1) return;
+          Widget screen;
+          switch (index) {
+            case 0:
+              screen = const HomeScreen();
+              break;
+            case 2:
+              screen = const MyOutfitsScreen();
+              break;
+            case 3:
+              screen = const ClothingCategoriesScreen();
+              break;
+            default:
+              return;
+          }
+           Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => screen,
+              transitionDuration: Duration.zero,
+            ),
+          );
+        },
+      ),
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseAuth.instance.currentUser != null
