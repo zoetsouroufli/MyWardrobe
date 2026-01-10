@@ -1,9 +1,50 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import 'package:path/path.dart' as p;
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  Future<String> uploadImage(File file) async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'User not logged in';
+
+    final fileName = p.basename(file.path);
+    // Use timestamp to prevent duplicates / conflicts
+    final storagePath =
+        'users/${user.uid}/wardrobe/img_${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    final ref = _storage.ref().child(storagePath);
+
+    // Read bytes directly to avoid File locking/path issues and metadata complexity
+    print('Reading bytes from $fileName...');
+    final bytes = await file.readAsBytes();
+
+    print('Starting upload (putData) of ${bytes.length} bytes to $storagePath');
+    final task = ref.putData(
+      bytes,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+    // Force jpeg for consistency, or detect based on extension if needed.
+    // Usually 'image/jpeg' works fine for png too in display, but for correctness let's guess.
+
+    final snapshot = await task;
+    print(
+      'Upload Task Finished. State: ${snapshot.state}, Bytes: ${snapshot.bytesTransferred}/${snapshot.totalBytes}',
+    );
+
+    if (snapshot.state != TaskState.success) {
+      throw 'Upload failed with state: ${snapshot.state}';
+    }
+
+    // Small delay
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    return await snapshot.ref.getDownloadURL();
+  }
 
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
@@ -22,27 +63,43 @@ class FirestoreService {
   }
 
   Future<void> addClothingItem(Map<String, dynamic> data) async {
+    await _db.collection('users').doc(uid).collection('wardrobe').add({
+      ...data,
+      // Default Schema Values
+      'timesWorn': 0,
+      'price': 0.0,
+      'size': 'M', // Default
+      'primaryColor': 0xFF000000,
+      'colorName': '',
+      'isInOutfit': false,
+    });
+  }
+
+  Future<void> deleteClothingItem(String docId, {String? imageUrl}) async {
+    if (uid.isEmpty) return;
+
+    // 1. Delete Firestore Document
     await _db
         .collection('users')
         .doc(uid)
         .collection('wardrobe')
-        .add({
-          ...data,
-          // Default Schema Values
-          'timesWorn': 0,
-          'price': 0.0,
-          'size': 'M', // Default
-          'primaryColor': 0xFF000000, 
-          'colorName': '',
-          'isInOutfit': false,
-        });
+        .doc(docId)
+        .delete();
+
+    // 2. Delete Storage Image (if remote)
+    if (imageUrl != null && imageUrl.startsWith('http')) {
+      try {
+        await _storage.refFromURL(imageUrl).delete();
+      } catch (e) {
+        print(
+          'Error deleting image from storage: $e',
+        ); // Likely object-not-found or similar
+      }
+    }
   }
 
   Future<void> seedSampleData() async {
-    final wardrobeRef = _db
-        .collection('users')
-        .doc(uid)
-        .collection('wardrobe');
+    final wardrobeRef = _db.collection('users').doc(uid).collection('wardrobe');
 
     // Check if data already exists to avoid duplicates
     // We will check per category now to allow partial updates
@@ -80,37 +137,32 @@ class FirestoreService {
         'assets/zoe-stripespullover.png',
         'assets/sweater2.png.jpg',
       ],
-      'Socks': [
-        'assets/zoe-socks.png',
-      ],
-      'Accessories': [
-        'assets/zoe-hat.png',
-        'assets/outfit_cap.jpg',
-      ]
+      'Socks': ['assets/zoe-socks.png'],
+      'Accessories': ['assets/zoe-hat.png', 'assets/outfit_cap.jpg'],
     };
 
     print('Seeding sample data for user $uid...');
     for (var entry in sampleData.entries) {
       final category = entry.key;
       final assets = entry.value;
-      
+
       // Check if this category has items already
       final catSnapshot = await wardrobeRef
           .where('category', isEqualTo: category)
           .limit(1)
           .get();
-          
+
       if (catSnapshot.docs.isEmpty) {
-         print('Adding $category...');
-         for (var assetPath in assets) {
-           final docRef = wardrobeRef.doc();
-           batch.set(docRef, {
-             'imageUrl': assetPath,
-             'category': category,
-             'dateAdded': FieldValue.serverTimestamp(),
-             'isSample': true,
-           });
-         }
+        print('Adding $category...');
+        for (var assetPath in assets) {
+          final docRef = wardrobeRef.doc();
+          batch.set(docRef, {
+            'imageUrl': assetPath,
+            'category': category,
+            'dateAdded': FieldValue.serverTimestamp(),
+            'isSample': true,
+          });
+        }
       } else {
         print('Category $category already exists.');
       }
@@ -123,23 +175,23 @@ class FirestoreService {
   Future<void> clearWardrobe() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
+
     final wardrobeRef = _db
         .collection('users')
         .doc(user.uid)
         .collection('wardrobe');
-        
+
     final snapshot = await wardrobeRef.get();
     if (snapshot.docs.isEmpty) {
-        print('Wardrobe already empty.');
-        return;
+      print('Wardrobe already empty.');
+      return;
     }
 
     final batch = _db.batch();
     for (var doc in snapshot.docs) {
       batch.delete(doc.reference);
     }
-    
+
     await batch.commit();
     print('Wardrobe cleared.');
   }
@@ -161,12 +213,12 @@ class FirestoreService {
 
     // Map of specific friends (optional custom names)
     // friend4 is 'babis heotis'
-    
+
     for (int i = 1; i <= 16; i++) {
       final docRef = friendsRef.doc();
       String name = 'Friend $i';
       String username = 'user$i';
-      
+
       if (i == 4) {
         name = 'babis heotis';
         username = 'fashion-icon';
@@ -229,10 +281,7 @@ class FirestoreService {
 
     for (var outfit in outfits) {
       final docRef = outfitsRef.doc();
-      batch.set(docRef, {
-        ...outfit,
-        'dateAdded': FieldValue.serverTimestamp(),
-      });
+      batch.set(docRef, {...outfit, 'dateAdded': FieldValue.serverTimestamp()});
     }
 
     await batch.commit();
@@ -278,10 +327,7 @@ class FirestoreService {
 
     for (var outfit in outfits) {
       final docRef = outfitsRef.doc();
-      batch.set(docRef, {
-        ...outfit,
-        'dateAdded': FieldValue.serverTimestamp(),
-      });
+      batch.set(docRef, {...outfit, 'dateAdded': FieldValue.serverTimestamp()});
     }
 
     await batch.commit();
@@ -302,31 +348,41 @@ class FirestoreService {
 
     final snapshot = await wardrobeRef.get();
     if (snapshot.docs.isEmpty) {
-        print('Wardrobe is empty, nothing to migrate.');
-        return;
+      print('Wardrobe is empty, nothing to migrate.');
+      return;
     }
 
     print('Starting migration for ${snapshot.docs.length} items...');
     final batch = _db.batch();
-    
+
     // Dummy Data Generators
     final _random = DateTime.now().millisecondsSinceEpoch;
     int counter = 0;
-    
+
     final brands = ['Zara', 'H&M', 'Nike', 'Adidas', 'Thrifted', 'Vintage'];
     final sizes = ['XS', 'S', 'M', 'L', 'XL'];
     final colors = [
-        0xFF000000, 0xFFFFFFFF, 0xFF9E9E9E, // Black, White, Grey
-        0xFFE91E63, 0xFF2196F3, 0xFF4CAF50, // Pink, Blue, Green
-        0xFFFFC107, 0xFF9C27B0, // Amber, Purple
+      0xFF000000, 0xFFFFFFFF, 0xFF9E9E9E, // Black, White, Grey
+      0xFFE91E63, 0xFF2196F3, 0xFF4CAF50, // Pink, Blue, Green
+      0xFFFFC107, 0xFF9C27B0, // Amber, Purple
     ];
-    final colorNames = ['Black', 'White', 'Grey', 'Pink', 'Blue', 'Green', 'Yellow', 'Purple'];
+    final colorNames = [
+      'Black',
+      'White',
+      'Grey',
+      'Pink',
+      'Blue',
+      'Green',
+      'Yellow',
+      'Purple',
+    ];
 
     for (var doc in snapshot.docs) {
       counter++;
       // Pseudo-random selection based on doc ID hash
-      final hash = doc.id.codeUnits.fold(0, (p, c) => p + c) + _random + counter;
-      
+      final hash =
+          doc.id.codeUnits.fold(0, (p, c) => p + c) + _random + counter;
+
       final randomPrice = 10 + (hash % 90); // 10 - 100
       final randomWorn = hash % 25; // 0 - 24
       final randomBrand = brands[hash % brands.length];
@@ -341,7 +397,7 @@ class FirestoreService {
         'timesWorn': randomWorn,
         'brand': randomBrand,
         'size': randomSize,
-        'primaryColor': randomColor, 
+        'primaryColor': randomColor,
         'colorName': randomColorName,
         'isInOutfit': isInOutfit,
         // Ensure other fields exist
@@ -353,7 +409,10 @@ class FirestoreService {
     print('Migration complete: ${snapshot.docs.length} items updated.');
   }
 
-  Future<void> updateClothingItem(String docId, Map<String, dynamic> data) async {
+  Future<void> updateClothingItem(
+    String docId,
+    Map<String, dynamic> data,
+  ) async {
     if (uid.isEmpty) return;
     await _db
         .collection('users')
@@ -363,29 +422,32 @@ class FirestoreService {
         .update(data);
   }
 
-  Future<void> updateItemInOutfitStatus(List<String> imagePaths, bool status) async {
-      // Note: We are finding items by ImageURL or Path because that's what we currently store in outfits['items']
-      // ideally outfits should store Item IDs. 
-      // For now, we will QUERY the wardrobe for these image paths to find the docs.
-      if (uid.isEmpty || imagePaths.isEmpty) return;
+  Future<void> updateItemInOutfitStatus(
+    List<String> imagePaths,
+    bool status,
+  ) async {
+    // Note: We are finding items by ImageURL or Path because that's what we currently store in outfits['items']
+    // ideally outfits should store Item IDs.
+    // For now, we will QUERY the wardrobe for these image paths to find the docs.
+    if (uid.isEmpty || imagePaths.isEmpty) return;
 
-      final wardrobeRef = _db.collection('users').doc(uid).collection('wardrobe');
-      final batch = _db.batch();
-      bool hasUpdates = false;
+    final wardrobeRef = _db.collection('users').doc(uid).collection('wardrobe');
+    final batch = _db.batch();
+    bool hasUpdates = false;
 
-      // We have to query one by one because 'whereIn' is limited and we might have paths
-      for (var path in imagePaths) {
-          // Try to match by imageUrl (if remote) or just assume valid matching logic
-          // This is a bit fragile if multiple items have same image, but acceptable for MVP
-          final q = await wardrobeRef.where('imageUrl', isEqualTo: path).get();
-          for (var doc in q.docs) {
-              batch.update(doc.reference, {'isInOutfit': status});
-              hasUpdates = true;
-          }
+    // We have to query one by one because 'whereIn' is limited and we might have paths
+    for (var path in imagePaths) {
+      // Try to match by imageUrl (if remote) or just assume valid matching logic
+      // This is a bit fragile if multiple items have same image, but acceptable for MVP
+      final q = await wardrobeRef.where('imageUrl', isEqualTo: path).get();
+      for (var doc in q.docs) {
+        batch.update(doc.reference, {'isInOutfit': status});
+        hasUpdates = true;
       }
+    }
 
-      if (hasUpdates) {
-          await batch.commit();
-      }
+    if (hasUpdates) {
+      await batch.commit();
+    }
   }
 }

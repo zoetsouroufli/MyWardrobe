@@ -44,6 +44,7 @@ class WardrobeManager {
   Future<String> saveImagePermanent(
     String tempPath, {
     required String category,
+    Map<String, dynamic> metadata = const {},
   }) async {
     final dir = await getApplicationDocumentsDirectory();
     final fileName = p.basename(tempPath);
@@ -57,10 +58,46 @@ class WardrobeManager {
       'path': permPath,
       'category': category,
       'date': DateTime.now().toIso8601String(),
+      'isSynced': false,
+      ...metadata, // Spread other fields
     });
     await _saveJson();
 
     return permPath;
+  }
+
+  Future<void> markAsSynced(String path) async {
+    final index = _items.indexWhere((element) => element['path'] == path);
+    if (index != -1) {
+      _items[index]['isSynced'] = true;
+      await _saveJson();
+    }
+  }
+
+  Future<void> updateItem(String path, Map<String, dynamic> updates) async {
+    final index = _items.indexWhere((element) => element['path'] == path);
+    if (index != -1) {
+      _items[index].addAll(updates);
+      await _saveJson();
+    }
+  }
+
+  Future<void> deleteItem(String path) async {
+    final index = _items.indexWhere((element) => element['path'] == path);
+    if (index != -1) {
+      _items.removeAt(index);
+      await _saveJson();
+
+      // Delete physical file
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        print('Error deleting local file: $e');
+      }
+    }
   }
 
   Future<void> _saveJson() async {
@@ -70,10 +107,7 @@ class WardrobeManager {
 
   List<Map<String, dynamic>> getItems() => _items;
 
-  List<String> getItemsByCategory(String category) {
-    return _items
-        .where((item) => item['category'] == category)
-        .map((item) => item['path'] as String)
-        .toList();
+  List<Map<String, dynamic>> getItemsByCategory(String category) {
+    return _items.where((item) => item['category'] == category).toList();
   }
 }
