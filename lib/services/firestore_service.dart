@@ -337,6 +337,138 @@ class FirestoreService {
     print('Wardrobe cleared.');
   }
 
+  // =======================================================================
+  // BACKUP & RESTORE SYSTEM
+  // =======================================================================
+
+  Future<void> exportWardrobeToBackup() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final wardrobeRef = _db.collection('users').doc(user.uid).collection('wardrobe');
+    final backupRef = _db.collection('users').doc(user.uid).collection('wardrobe_backup');
+
+    final snapshot = await wardrobeRef.get();
+    if (snapshot.docs.isEmpty) {
+      print('Wardrobe is empty, nothing to backup.');
+      return;
+    }
+
+    // Clear existing backup first
+    final existingBackup = await backupRef.get();
+    final deleteBatch = _db.batch();
+    for (var doc in existingBackup.docs) {
+      deleteBatch.delete(doc.reference);
+    }
+    await deleteBatch.commit();
+
+    // Copy all items to backup
+    final batch = _db.batch();
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      data['backupTimestamp'] = FieldValue.serverTimestamp();
+      data['originalId'] = doc.id;
+      batch.set(backupRef.doc(), data);
+    }
+
+    await batch.commit();
+    print('Backup complete: ${snapshot.docs.length} items saved.');
+  }
+
+  Future<void> restoreFromBackupWithMLKit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final backupRef = _db.collection('users').doc(user.uid).collection('wardrobe_backup');
+    final wardrobeRef = _db.collection('users').doc(user.uid).collection('wardrobe');
+
+    final snapshot = await backupRef.get();
+    if (snapshot.docs.isEmpty) {
+      print('No backup found.');
+      return;
+    }
+
+    print('Restoring ${snapshot.docs.length} items from backup...');
+
+    // Initialize ML Kit (mobile only)
+    ImageLabeler? labeler;
+    if (!kIsWeb) {
+      try {
+        final options = ImageLabelerOptions(confidenceThreshold: 0.5);
+        labeler = ImageLabeler(options: options);
+      } catch (e) {
+        print('ML Kit initialization failed: $e');
+      }
+    }
+
+    int count = 0;
+    for (var doc in snapshot.docs) {
+      final data = Map<String, dynamic>.from(doc.data());
+      data.remove('backupTimestamp');
+      data.remove('originalId');
+
+      String category = data['category'] ?? 'Other';
+      final imageUrl = data['imageUrl'] as String?;
+
+      // Try ML Kit re-categorization on mobile
+      if (labeler != null && imageUrl != null && imageUrl.startsWith('http')) {
+        try {
+          // Download image temporarily for ML Kit processing
+          // This is a simplified version - in production you'd want better error handling
+          final response = await _storage.refFromURL(imageUrl).getData();
+          if (response != null) {
+            final tempFile = File('${Directory.systemTemp.path}/temp_${DateTime.now().millisecondsSinceEpoch}.jpg');
+            await tempFile.writeAsBytes(response);
+
+            final inputImage = InputImage.fromFile(tempFile);
+            final labels = await labeler.processImage(inputImage);
+
+            // Map ML Kit labels to categories
+            for (var label in labels) {
+              final text = label.label.toLowerCase();
+              if (text.contains('pant') || text.contains('jean') || text.contains('trouser')) {
+                category = 'Pants';
+                break;
+              } else if (text.contains('shirt') || text.contains('top')) {
+                category = 'T-Shirts';
+                break;
+              } else if (text.contains('jacket') || text.contains('coat')) {
+                category = 'Jackets';
+                break;
+              } else if (text.contains('shoe') || text.contains('footwear')) {
+                category = 'Shoes';
+                break;
+              } else if (text.contains('sweater') || text.contains('hoodie')) {
+                category = 'Hoodies';
+                break;
+              }
+            }
+
+            await tempFile.delete();
+          }
+        } catch (e) {
+          print('ML Kit processing failed for item: $e');
+        }
+      }
+
+      data['category'] = category;
+      data['dateAdded'] = FieldValue.serverTimestamp();
+
+      await wardrobeRef.add(data);
+      count++;
+      
+      if (count % 10 == 0) {
+        print('Restored $count/${snapshot.docs.length} items...');
+      }
+    }
+
+    if (labeler != null) {
+      labeler.close();
+    }
+
+    print('Restore complete: $count items restored.');
+  }
+
   Future<void> seedFriends() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
