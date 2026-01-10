@@ -478,8 +478,17 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
           );
         },
       );
-    } else if (kIsWeb) {
+    } else if (path.startsWith('http')) {
       return Image.network(
+        path,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) =>
+            const Center(child: Icon(Icons.broken_image, color: Colors.amber)),
+      );
+    } else if (kIsWeb) {
+       // On Web, if it's not http and not asset, it might be a blob or relative path
+       // But File() is not supported. Try NetworkImage as fallback or show error.
+       return Image.network(
         path,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) =>

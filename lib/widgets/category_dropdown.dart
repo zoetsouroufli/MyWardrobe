@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../screens/selected_clothing_item.dart';
 
@@ -104,7 +105,14 @@ class CategoryDropdownTile extends StatelessWidget {
                                             );
                                           },
                                     )
-                                  : Image.file(
+                                  : (kIsWeb 
+                                      ? Image.network(
+                                          imagePath, 
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => 
+                                              const Center(child: Icon(Icons.broken_image, color: Colors.amber)),
+                                        ) 
+                                      : Image.file(
                                       File(imagePath),
                                       fit: BoxFit.cover,
                                       errorBuilder:
@@ -116,7 +124,7 @@ class CategoryDropdownTile extends StatelessWidget {
                                               ),
                                             );
                                           },
-                                    )),
+                                    ))),
                       ),
                     ),
                   );
