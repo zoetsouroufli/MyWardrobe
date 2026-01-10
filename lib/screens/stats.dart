@@ -89,9 +89,15 @@ class StatsScreen extends StatelessWidget {
               }
 
               // Use colorName for aggregation to group properly
-              final colorName = data['colorName'] as String?;
-              if (colorName != null && colorName.isNotEmpty) {
-                 colorCounts[colorName] = (colorCounts[colorName] ?? 0) + 1;
+              final rawColorName = data['colorName'] as String?;
+              if (rawColorName != null && rawColorName.trim().isNotEmpty) {
+                 // Normalize: Trim and Capitalize First Letter, rest lowercase
+                 final trimmed = rawColorName.trim();
+                 final normalizedColor = trimmed.length > 1 
+                     ? trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase() 
+                     : trimmed.toUpperCase();
+                 
+                 colorCounts[normalizedColor] = (colorCounts[normalizedColor] ?? 0) + 1;
               } else {
                  final color = (data['primaryColor'] as int?) ?? 0;
                  if (color != 0) {

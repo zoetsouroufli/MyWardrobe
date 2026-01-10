@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../widgets/back_button.dart';
+import '../services/firestore_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -345,6 +346,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                         ),
                                       ),
                                     ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  
+                                  // Migration / Debug Button
+                                  TextButton.icon(
+                                    onPressed: () async {
+                                      setState(() => _isLoading = true);
+                                      try {
+                                        await FirestoreService().migrateWardrobe();
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Legacy data fixed! Check Categories now.')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                         if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Error: $e')),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _isLoading = false);
+                                      }
+                                    }, 
+                                    icon: const Icon(Icons.build, color: Colors.grey),
+                                    label: const Text('Fix Legacy Data', style: TextStyle(color: Colors.grey)),
                                   ),
                                   const SizedBox(height: 20),
                                 ],
