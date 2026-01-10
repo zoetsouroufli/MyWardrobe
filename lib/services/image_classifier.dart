@@ -6,7 +6,7 @@ class ImageClassifier {
   ImageClassifier._internal();
 
   final ImageLabeler _labeler = ImageLabeler(
-    options: ImageLabelerOptions(confidenceThreshold: 0.5),
+    options: ImageLabelerOptions(confidenceThreshold: 0.2), // Lowered from 0.5
   );
 
   // Mapping from ML Kit labels to our categories
@@ -15,26 +15,39 @@ class ImageClassifier {
     'Trousers': 'Pants',
     'Pants': 'Pants',
     'Shorts': 'Pants',
-    'Skirt': 'Pants', // Map skirt to pants for now or new category
+    'Skirt': 'Pants',
+    'Denim': 'Pants', // Common for jeans
+    'Chinos': 'Pants',
     'Shirt': 'T-Shirts',
     'T-Shirt': 'T-Shirts',
     'Top': 'T-Shirts',
     'Jersey': 'T-Shirts',
     'Blouse': 'T-Shirts',
+    'Polo': 'T-Shirts', // Polo shirt
     'Sweatshirt': 'Hoodies',
     'Hoodie': 'Hoodies',
+    'Sweater': 'Hoodies', // Added
+    'Pullover': 'Hoodies', // Added
     'Jacket': 'Jackets',
     'Coat': 'Jackets',
     'Blazer': 'Jackets',
     'Overcoat': 'Jackets',
     'Vest': 'Jackets',
+    'Outerwear': 'Jackets', // Generic
+    'Cardigan': 'Jackets', // Or hoodies?
+    'Parka': 'Jackets',
+    'Raincoat': 'Jackets',
     'Sock': 'Socks',
+    'Socks': 'Socks',
     'Shoe': 'Shoes',
     'Sneaker': 'Shoes',
     'Boot': 'Shoes',
     'Sandal': 'Shoes',
     'Flip-flop': 'Shoes',
     'Footwear': 'Shoes',
+    'Heels': 'Shoes',
+    'Loafers': 'Shoes',
+    'Trainers': 'Shoes',
     'Scarf': 'Accessories',
     'Hat': 'Accessories',
     'Cap': 'Accessories',
@@ -42,6 +55,10 @@ class ImageClassifier {
     'Sunglasses': 'Accessories',
     'Bag': 'Accessories',
     'Handbag': 'Accessories',
+    'Backpack': 'Accessories',
+    'Tie': 'Accessories',
+    'Belt': 'Accessories',
+    'Watch': 'Accessories',
   };
 
   final List<String> _validCategories = [
