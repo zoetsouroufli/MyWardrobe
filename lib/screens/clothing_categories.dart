@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/category_dropdown.dart';
 import '../widgets/add_new_item.dart';
-import '../services/firestore_service.dart';
+// import '../services/firestore_service.dart'; // Unused
+
 import '../services/wardrobe_manager.dart'; // Added import for WardrobeManager
 import 'home_screen.dart';
 import 'stats.dart';
@@ -33,15 +34,7 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Wardrobe'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
-        actions: [
-          // Sync button removed
-        ],
-      ),
+      // appBar removed to eliminate gap
       backgroundColor: Colors.white,
       bottomNavigationBar: BottomNav(
         selectedIndex: 3,
@@ -89,74 +82,7 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
               // ===== ADD NEW ITEM BUTTON =====
               const AddNewItemButton(),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () async {
-                      try {
-                        await FirestoreService().seedSampleData();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Sample data loaded!'),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        print(e);
-                      }
-                    },
-                    child: const Text(
-                      'Load Sample Data',
-                      style: TextStyle(color: Colors.green),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  TextButton(
-                    onPressed: () async {
-                      try {
-                        await FirestoreService().migrateWardrobe();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Migration Complete: Dummy Data Added!',
-                              ),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        print(e);
-                      }
-                    },
-                    child: const Text(
-                      'Migrate Data',
-                      style: TextStyle(color: Colors.blue),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  TextButton(
-                    onPressed: () async {
-                      try {
-                        await FirestoreService().clearWardrobe();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Wardrobe cleared!')),
-                          );
-                        }
-                      } catch (e) {
-                        print(e);
-                      }
-                    },
-                    child: const Text(
-                      'Clear Wardrobe',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-
+              // Debug buttons removed
               const SizedBox(height: 30),
 
               // ===== STREAM BUILDER FOR CATEGORIES =====

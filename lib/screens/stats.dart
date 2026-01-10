@@ -50,10 +50,10 @@ class StatsScreen extends StatelessWidget {
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseAuth.instance.currentUser != null
               ? FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(FirebaseAuth.instance.currentUser!.uid)
-                  .collection('wardrobe')
-                  .snapshots()
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser!.uid)
+                    .collection('wardrobe')
+                    .snapshots()
               : const Stream.empty(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
@@ -80,7 +80,7 @@ class StatsScreen extends StatelessWidget {
 
               final color = (data['primaryColor'] as int?) ?? 0;
               if (color != 0) {
-                 colorCounts[color] = (colorCounts[color] ?? 0) + 1;
+                colorCounts[color] = (colorCounts[color] ?? 0) + 1;
               }
 
               allItems.add(data);
@@ -101,8 +101,8 @@ class StatsScreen extends StatelessWidget {
             int maxCount = 0;
             colorCounts.forEach((color, count) {
               if (count > maxCount) {
-                 maxCount = count;
-                 favColorInt = color;
+                maxCount = count;
+                favColorInt = color;
               }
             });
 
@@ -110,10 +110,13 @@ class StatsScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  const SizedBox(height: 8),
-                  const Text('stats', style: TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 12),
-                  Image.asset('assets/MyWardrobe.png', height: 46),
+                  const SizedBox(height: 20),
+
+                  Image.asset(
+                    'assets/MyWardrobe.png',
+                    width: 180,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(height: 24),
 
                   /// PIE + RIGHT CARDS
@@ -121,17 +124,18 @@ class StatsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                          flex: 3,
-                          child:
-                              ClothingTypePie(categoryCounts: categoryCounts)),
+                        flex: 3,
+                        child: ClothingTypePie(categoryCounts: categoryCounts),
+                      ),
                       const SizedBox(width: 16),
                       Expanded(
-                          flex: 2,
-                          child: LeastMostColumn(
-                            leastWorn: leastWorn,
-                            mostWorn: mostWorn,
-                            totalItems: totalItems,
-                          )),
+                        flex: 2,
+                        child: LeastMostColumn(
+                          leastWorn: leastWorn,
+                          mostWorn: mostWorn,
+                          totalItems: totalItems,
+                        ),
+                      ),
                     ],
                   ),
 
@@ -156,8 +160,10 @@ class StatsScreen extends StatelessWidget {
                             ),
                           )
                         else
-                          const Text('-',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text(
+                            '-',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                       ],
                     ),
                   ),

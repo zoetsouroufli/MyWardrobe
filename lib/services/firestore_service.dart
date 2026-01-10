@@ -64,14 +64,15 @@ class FirestoreService {
 
   Future<void> addClothingItem(Map<String, dynamic> data) async {
     await _db.collection('users').doc(uid).collection('wardrobe').add({
-      ...data,
       // Default Schema Values
       'timesWorn': 0,
       'price': 0.0,
-      'size': 'M', // Default
+      'size': 'M',
       'primaryColor': 0xFF000000,
       'colorName': '',
       'isInOutfit': false,
+
+      ...data, // User data overrides defaults
     });
   }
 
