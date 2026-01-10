@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
@@ -138,8 +139,7 @@ class _SelectedClothingItemScreenState
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child:
-                      (widget.imagePath.startsWith('http') ||
-                          widget.imagePath.startsWith('blob:'))
+                      (widget.imagePath.startsWith('http') || widget.imagePath.startsWith('blob:'))
                       ? Image.network(
                           widget.imagePath,
                           fit: BoxFit.contain, // Show full item
@@ -150,16 +150,27 @@ class _SelectedClothingItemScreenState
                                 color: Colors.grey,
                               ),
                         )
-                      : Image.asset(
-                          widget.imagePath,
-                          fit: BoxFit.contain, // Show full item
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.broken_image,
-                                size: 50,
-                                color: Colors.grey,
-                              ),
-                        ),
+                      : (widget.imagePath.startsWith('assets/')
+                          ? Image.asset(
+                              widget.imagePath,
+                              fit: BoxFit.contain, // Show full item
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    Icons.broken_image,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  ),
+                            )
+                          : Image.file(
+                              File(widget.imagePath),
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    Icons.broken_image,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  ),
+                            )),
                 ),
               ),
 

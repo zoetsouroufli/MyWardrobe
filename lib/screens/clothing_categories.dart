@@ -92,7 +92,7 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                           .collection('users')
                           .doc(FirebaseAuth.instance.currentUser!.uid)
                           .collection('wardrobe')
-                          .orderBy('dateAdded', descending: true)
+                          // Removed orderBy to ensure docs without dateAdded are included (Legacy Data Fix)
                           .snapshots()
                     : const Stream.empty(),
                 builder: (context, snapshot) {
@@ -116,61 +116,77 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                   }
 
                   final docs = snapshot.data!.docs;
+                  print('DEBUG: Categories Screen loaded ${docs.length} items.');
+                  for (var d in docs) {
+                     // print('DEBUG: Item ${d.id} - Cat: ${d['category']} - Date: ${d.data().toString().contains('dateAdded') ? 'Yes' : 'No'}');
+                  }
+                  
+                  // Sort client-side to handle missing dateAdded fields
+                  docs.sort((a, b) {
+                    final dataA = a.data() as Map<String, dynamic>;
+                    final dataB = b.data() as Map<String, dynamic>;
+                    
+                    final dateA = (dataA['dateAdded'] as Timestamp?)?.toDate();
+                    final dateB = (dataB['dateAdded'] as Timestamp?)?.toDate();
+                    
+                    if (dateA == null && dateB == null) return 0;
+                    if (dateA == null) return 1; // Null at bottom
+                    if (dateB == null) return -1;
+                    
+                    return dateB.compareTo(dateA); // Descending
+                  });
 
-                  // Helper function to filter by category
-                  List<Map<String, dynamic>> getItemsFor(String category) {
-                    final remote = docs
-                        .where(
-                          (doc) =>
-                              (doc.data()
-                                  as Map<String, dynamic>)['category'] ==
-                              category,
-                        )
-                        .map(
-                          (doc) => {
-                            'imageUrl':
-                                (doc.data()
-                                    as Map<String, dynamic>)['imageUrl'],
-                            'id': doc.id,
-                            'data': doc.data(),
-                          },
-                        )
-                        .toList();
+                  // Group items by category dynamically
+                  final Map<String, List<Map<String, dynamic>>> groupedItems = {};
+                  
+                  for (var doc in docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    String category = (data['category'] ?? 'Other').toString().trim();
+                    if (category.isEmpty) category = 'Other';
+                    
+                    // Normalize standard categories to Title Case if needed, 
+                    // or just keep as is. For better UX, let's Capitalize start.
+                    if (category.length > 1) {
+                      category = category[0].toUpperCase() + category.substring(1);
+                    } else {
+                      category = category.toUpperCase();
+                    }
 
-                    return remote;
+                    if (!groupedItems.containsKey(category)) {
+                      groupedItems[category] = [];
+                    }
+                    
+                    groupedItems[category]!.add({
+                      'imageUrl': data['imageUrl'],
+                      'id': doc.id,
+                      'data': data,
+                    });
                   }
 
+                  // Define standard order
+                  final standardOrder = [
+                    'Pants', 'T-Shirts', 'Hoodies', 'Jackets', 
+                    'Socks', 'Shoes', 'Accessories'
+                  ];
+                  
+                  // Sort categories: Standard ones first, then alphabetical others
+                  final sortedKeys = groupedItems.keys.toList()..sort((a, b) {
+                     final indexA = standardOrder.indexOf(a); // Loose matching?
+                     final indexB = standardOrder.indexOf(b);
+                     
+                     if (indexA != -1 && indexB != -1) return indexA.compareTo(indexB);
+                     if (indexA != -1) return -1;
+                     if (indexB != -1) return 1;
+                     return a.compareTo(b);
+                  });
+
                   return Column(
-                    children: [
-                      CategoryDropdownTile(
-                        title: 'Pants',
-                        items: getItemsFor('Pants'),
-                      ),
-                      CategoryDropdownTile(
-                        title: 'T-Shirts',
-                        items: getItemsFor('T-Shirts'),
-                      ),
-                      CategoryDropdownTile(
-                        title: 'Hoodies',
-                        items: getItemsFor('Hoodies'),
-                      ),
-                      CategoryDropdownTile(
-                        title: 'Jackets',
-                        items: getItemsFor('Jackets'),
-                      ),
-                      CategoryDropdownTile(
-                        title: 'Socks',
-                        items: getItemsFor('Socks'),
-                      ),
-                      CategoryDropdownTile(
-                        title: 'Shoes',
-                        items: getItemsFor('Shoes'),
-                      ),
-                      CategoryDropdownTile(
-                        title: 'Accessories',
-                        items: getItemsFor('Accessories'),
-                      ),
-                    ],
+                    children: sortedKeys.map((category) {
+                      return CategoryDropdownTile(
+                        title: category,
+                        items: groupedItems[category]!,
+                      );
+                    }).toList(),
                   );
                 },
               ),
