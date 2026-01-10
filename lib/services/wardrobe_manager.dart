@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -11,6 +12,7 @@ class WardrobeManager {
   List<Map<String, dynamic>> _items = [];
 
   Future<void> init() async {
+    if (kIsWeb) return; // Skip on Web
     final file = await _getJsonFile();
     if (await file.exists()) {
       try {
@@ -46,6 +48,7 @@ class WardrobeManager {
     required String category,
     Map<String, dynamic> metadata = const {},
   }) async {
+    if (kIsWeb) return tempPath;
     final dir = await getApplicationDocumentsDirectory();
     final fileName = p.basename(tempPath);
     final permPath = p.join(dir.path, fileName);
@@ -67,6 +70,7 @@ class WardrobeManager {
   }
 
   Future<void> markAsSynced(String path) async {
+    if (kIsWeb) return;
     final index = _items.indexWhere((element) => element['path'] == path);
     if (index != -1) {
       _items[index]['isSynced'] = true;
@@ -75,6 +79,7 @@ class WardrobeManager {
   }
 
   Future<void> updateItem(String path, Map<String, dynamic> updates) async {
+    if (kIsWeb) return;
     final index = _items.indexWhere((element) => element['path'] == path);
     if (index != -1) {
       _items[index].addAll(updates);
@@ -83,6 +88,7 @@ class WardrobeManager {
   }
 
   Future<void> deleteItem(String path) async {
+    if (kIsWeb) return;
     final index = _items.indexWhere((element) => element['path'] == path);
     if (index != -1) {
       _items.removeAt(index);
@@ -101,6 +107,7 @@ class WardrobeManager {
   }
 
   Future<void> _saveJson() async {
+    if (kIsWeb) return;
     final file = await _getJsonFile();
     await file.writeAsString(json.encode(_items));
   }

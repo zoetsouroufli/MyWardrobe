@@ -82,7 +82,7 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
               // ===== ADD NEW ITEM BUTTON =====
               const AddNewItemButton(),
 
-              // Debug buttons removed
+              // Debug buttons removed (Accepted Remote Change)
               const SizedBox(height: 30),
 
               // ===== STREAM BUILDER FOR CATEGORIES =====

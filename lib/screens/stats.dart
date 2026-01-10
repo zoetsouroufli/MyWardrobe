@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:my_app/widgets/card_decoration.dart';
-import '../widgets/bottom_nav.dart';
+import 'package:fl_chart/fl_chart.dart';
+
 import '../widgets/clothing_type_pie.dart';
-import '../widgets/barchart.dart';
 import '../widgets/least_most_column.dart';
-import '../widgets/info_bars.dart';
 import '../widgets/MonthlySpendingChart.dart';
-import 'home_screen.dart';
-import 'my_outfits.dart';
-import 'clothing_categories.dart';
+import '../widgets/barchart.dart';
+import '../widgets/info_bars.dart';
+import '../widgets/card_decoration.dart';
 
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
@@ -18,42 +16,15 @@ class StatsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F5),
-      bottomNavigationBar: BottomNav(
-        selectedIndex: 1,
-        onTap: (index) {
-          if (index == 1) return;
-          Widget screen;
-          switch (index) {
-            case 0:
-              screen = const HomeScreen();
-              break;
-            case 2:
-              screen = const MyOutfitsScreen();
-              break;
-            case 3:
-              screen = const ClothingCategoriesScreen();
-              break;
-            default:
-              return;
-          }
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => screen,
-              transitionDuration: Duration.zero,
-            ),
-          );
-        },
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseAuth.instance.currentUser != null
               ? FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(FirebaseAuth.instance.currentUser!.uid)
-                    .collection('wardrobe')
-                    .snapshots()
+                  .collection('users')
+                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                  .collection('wardrobe')
+                  .snapshots()
               : const Stream.empty(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
@@ -65,22 +36,35 @@ class StatsScreen extends StatelessWidget {
             // 1. Total Items
             final totalItems = docs.length;
 
-            // 2. Category Counts
+            // 2. Category Counts & Aggregation
             final categoryCounts = <String, int>{};
             double totalValue = 0;
-            final colorCounts = <int, int>{};
+            final colorCounts = <String, int>{}; // String keys for color names
             List<Map<String, dynamic>> allItems = [];
+            final monthlySpending = <int, double>{};
 
             for (var doc in docs) {
               final data = doc.data() as Map<String, dynamic>;
               final cat = data['category'] as String? ?? 'Other';
               categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
 
-              totalValue += (data['price'] as num?)?.toDouble() ?? 0;
+              final price = (data['price'] as num?)?.toDouble() ?? 0;
+              totalValue += price;
 
-              final color = (data['primaryColor'] as int?) ?? 0;
-              if (color != 0) {
-                colorCounts[color] = (colorCounts[color] ?? 0) + 1;
+              final monthAdded = (data['monthAdded'] as int?) ?? 0;
+              if (monthAdded >= 1 && monthAdded <= 12) {
+                monthlySpending[monthAdded] = (monthlySpending[monthAdded] ?? 0) + price;
+              }
+
+              // Use colorName for aggregation to group properly
+              final colorName = data['colorName'] as String?;
+              if (colorName != null && colorName.isNotEmpty) {
+                 colorCounts[colorName] = (colorCounts[colorName] ?? 0) + 1;
+              } else {
+                 final color = (data['primaryColor'] as int?) ?? 0;
+                 if (color != 0) {
+                    // Fallback to "Unknown" or skip if raw int isn't mappable easily
+                 }
               }
 
               allItems.add(data);
@@ -97,14 +81,32 @@ class StatsScreen extends StatelessWidget {
             final mostWorn = allItems.isNotEmpty ? allItems.last : null;
 
             // 4. Favourite Colour
-            int favColorInt = 0;
+            String favColorName = '-';
             int maxCount = 0;
-            colorCounts.forEach((color, count) {
+            colorCounts.forEach((colorName, count) {
               if (count > maxCount) {
-                maxCount = count;
-                favColorInt = color;
+                 maxCount = count;
+                 favColorName = colorName;
               }
             });
+            
+            // Helper to get Color object from name
+            Color _getColor(String name) {
+                switch (name.toLowerCase()) {
+                  case 'red': return Colors.red;
+                  case 'blue': return Colors.blue;
+                  case 'black': return Colors.black;
+                  case 'white': return Colors.grey.shade400;
+                  case 'green': return Colors.green;
+                  case 'yellow': return Colors.yellow;
+                  case 'grey': return Colors.grey;
+                  case 'purple': return Colors.purple;
+                  case 'pink': return Colors.pink;
+                  case 'orange': return Colors.orange;
+                  case 'brown': return Colors.brown;
+                  default: return Colors.transparent;
+                }
+            }
 
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -149,21 +151,19 @@ class StatsScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Favourite colour'),
-                        if (favColorInt != 0)
+                        if (favColorName != '-' && _getColor(favColorName) != Colors.transparent)
                           Container(
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: Color(favColorInt),
+                              color: _getColor(favColorName),
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.grey.shade300),
                             ),
                           )
                         else
-                          const Text(
-                            '-',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          Text(favColorName,
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -177,12 +177,12 @@ class StatsScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   /// LINE CHART
-                  const MonthlySpendChart(),
+                  MonthlySpendChart(monthlySpending: monthlySpending),
 
                   const SizedBox(height: 20),
 
                   /// BAR CHART
-                  const ClothesByColorBarChart(),
+                  ClothesByColorBarChart(colorCounts: colorCounts),
 
                   const SizedBox(height: 32),
                 ],
