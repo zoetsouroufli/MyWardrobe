@@ -6,7 +6,9 @@ class ImageClassifier {
   ImageClassifier._internal();
 
   final ImageLabeler _labeler = ImageLabeler(
-    options: ImageLabelerOptions(confidenceThreshold: 0.2), // Lowered from 0.5
+    options: ImageLabelerOptions(
+      confidenceThreshold: 0.4,
+    ), // Raised back to 0.4
   );
 
   // Mapping from ML Kit labels to our categories
@@ -33,8 +35,8 @@ class ImageClassifier {
     'Blazer': 'Jackets',
     'Overcoat': 'Jackets',
     'Vest': 'Jackets',
-    'Outerwear': 'Jackets', // Generic
-    'Cardigan': 'Jackets', // Or hoodies?
+    // 'Outerwear': 'Jackets', // REMOVED: Too generic, causes bias
+    'Cardigan': 'Jackets',
     'Parka': 'Jackets',
     'Raincoat': 'Jackets',
     'Sock': 'Socks',
