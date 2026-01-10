@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
 import '../services/firestore_service.dart';
+import '../services/wardrobe_manager.dart';
 import 'add_new_outfit.dart';
 
 class SelectedClothingItemScreen extends StatefulWidget {
@@ -38,11 +39,12 @@ class _SelectedClothingItemScreenState
   void initState() {
     super.initState();
     final data = widget.initialData ?? {};
+    print('DEBUG: SelectedClothingItemScreen initialData: $data');
     _size = data['size'] ?? 'M';
     _brandController = TextEditingController(text: data['brand'] ?? 'Unknown');
     _colorNameController = TextEditingController(text: data['colorName'] ?? '');
     _priceController = TextEditingController(
-      text: (data['price'] as num?)?.toStringAsFixed(0) ?? '0'
+      text: (data['price'] as num?)?.toStringAsFixed(0) ?? '0',
     );
     _timesWorn = (data['timesWorn'] as num?)?.toInt() ?? 0;
     _primaryColorValue = (data['primaryColor'] as int?) ?? 0xFF000000;
@@ -67,13 +69,14 @@ class _SelectedClothingItemScreenState
   }
 
   Future<void> _updateItemsInOutfitStatus(bool status) async {
-       if (widget.itemId == null) return;
-        // Since we refactored code to update by ID, we can do it directly
-        // But the previous helper was by Image Path. Ideally use ID.
-        // For this screen we have ID.
-       await FirestoreService().updateClothingItem(widget.itemId!, {'isInOutfit': status});
+    if (widget.itemId == null) return;
+    // Since we refactored code to update by ID, we can do it directly
+    // But the previous helper was by Image Path. Ideally use ID.
+    // For this screen we have ID.
+    await FirestoreService().updateClothingItem(widget.itemId!, {
+      'isInOutfit': status,
+    });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +104,17 @@ class _SelectedClothingItemScreenState
                     width: 150, // Matches other screens
                     fit: BoxFit.contain,
                   ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 28,
+                        color: Colors.black,
+                      ),
+                      onPressed: () => _confirmDelete(context),
+                    ),
+                  ),
                 ],
               ),
 
@@ -116,26 +130,28 @@ class _SelectedClothingItemScreenState
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: (widget.imagePath.startsWith('http') || widget.imagePath.startsWith('blob:'))
+                  child:
+                      (widget.imagePath.startsWith('http') ||
+                          widget.imagePath.startsWith('blob:'))
                       ? Image.network(
                           widget.imagePath,
                           fit: BoxFit.contain, // Show full item
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(
-                            Icons.broken_image,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
+                                Icons.broken_image,
+                                size: 50,
+                                color: Colors.grey,
+                              ),
                         )
                       : Image.asset(
                           widget.imagePath,
                           fit: BoxFit.contain, // Show full item
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(
-                            Icons.broken_image,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
+                                Icons.broken_image,
+                                size: 50,
+                                color: Colors.grey,
+                              ),
                         ),
                 ),
               ),
@@ -147,7 +163,8 @@ class _SelectedClothingItemScreenState
               // 1. COLOUR
               _buildStatRow(
                 label: 'Colour',
-                iconAsset: 'assets/colour-palette.png', // Keep asset if exists, else remove
+                iconAsset:
+                    'assets/colour-palette.png', // Keep asset if exists, else remove
                 content: GestureDetector(
                   onTap: () => _showColorPicker(context),
                   child: Container(
@@ -467,22 +484,24 @@ class _SelectedClothingItemScreenState
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseAuth.instance.currentUser != null
                           ? FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(FirebaseAuth.instance.currentUser!.uid)
-                              .collection('outfits')
-                              .orderBy('dateAdded', descending: true)
-                              .snapshots()
+                                .collection('users')
+                                .doc(FirebaseAuth.instance.currentUser!.uid)
+                                .collection('outfits')
+                                .orderBy('dateAdded', descending: true)
+                                .snapshots()
                           : const Stream.empty(),
                       builder: (context, snapshot) {
-                         if (!snapshot.hasData) {
-                           return const Center(child: CircularProgressIndicator());
-                         }
-                         
-                         final docs = snapshot.data!.docs;
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
 
-                         if (docs.isEmpty) {
-                           return const Center(child: Text("No outfits found."));
-                         }
+                        final docs = snapshot.data!.docs;
+
+                        if (docs.isEmpty) {
+                          return const Center(child: Text("No outfits found."));
+                        }
 
                         return ListView.builder(
                           itemCount: docs.length,
@@ -537,19 +556,23 @@ class _SelectedClothingItemScreenState
                                 .collection('outfits')
                                 .doc(docId);
                             batch.update(ref, {
-                              'items': FieldValue.arrayUnion([widget.imagePath])
+                              'items': FieldValue.arrayUnion([
+                                widget.imagePath,
+                              ]),
                             });
                           }
                           await batch.commit();
-                          
+
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Added to outfits!')),
+                              const SnackBar(
+                                content: Text('Added to outfits!'),
+                              ),
                             );
                             Navigator.pop(context);
                           }
                         } else {
-                           Navigator.pop(context);
+                          Navigator.pop(context);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -644,5 +667,56 @@ class _SelectedClothingItemScreenState
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Item'),
+        content: const Text(
+          'Are you sure you want to delete this item? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        if (widget.itemId != null) {
+          // Cloud Delete
+          await FirestoreService().deleteClothingItem(
+            widget.itemId!,
+            imageUrl: widget.imagePath,
+          );
+        } else {
+          // Local Delete
+          await WardrobeManager().deleteItem(widget.imagePath);
+        }
+        if (mounted) {
+          Navigator.pop(context); // Return to previous screen
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Item deleted.')));
+        }
+      } catch (e) {
+        print('Error deleting item: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting item: $e')));
+        }
+      }
+    }
   }
 }

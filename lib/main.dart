@@ -19,11 +19,13 @@ import 'screens/stats.dart';
 import 'screens/camera_screen.dart';
 
 import 'package:camera/camera.dart';
+import 'services/wardrobe_manager.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await WardrobeManager().init();
   runApp(const MyApp());
 }
 
@@ -45,7 +47,9 @@ class MyApp extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-             return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
           if (snapshot.hasData) {
             return const HomeScreen();

@@ -9,7 +9,6 @@ import '../services/wardrobe_manager.dart'; // Added import for WardrobeManager
 import 'home_screen.dart';
 import 'stats.dart';
 import 'my_outfits.dart';
-import '../services/wardrobe_manager.dart';
 
 class ClothingCategoriesScreen extends StatefulWidget {
   const ClothingCategoriesScreen({super.key});
@@ -34,6 +33,15 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Wardrobe'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+        actions: [
+          // Sync button removed
+        ],
+      ),
       backgroundColor: Colors.white,
       bottomNavigationBar: BottomNav(
         selectedIndex: 3,
@@ -112,7 +120,9 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Migration Complete: Dummy Data Added!'),
+                              content: Text(
+                                'Migration Complete: Dummy Data Added!',
+                              ),
                             ),
                           );
                         }
@@ -192,20 +202,16 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
                         )
                         .map(
                           (doc) => {
-                            'imageUrl': (doc.data() as Map<String, dynamic>)['imageUrl'],
+                            'imageUrl':
+                                (doc.data()
+                                    as Map<String, dynamic>)['imageUrl'],
                             'id': doc.id,
                             'data': doc.data(),
                           },
                         )
                         .toList();
 
-                    final local = WardrobeManager().getItemsByCategory(category).map((path) => {
-                       'imageUrl': path,
-                       'id': null, // Local items have no ID yet
-                       'data': <String, dynamic>{}, 
-                    }).toList();
-
-                    return [...local, ...remote];
+                    return remote;
                   }
 
                   return Column(

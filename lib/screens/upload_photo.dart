@@ -8,12 +8,12 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/back_button.dart';
+import '../widgets/color_palette_picker.dart';
 import 'clothing_categories.dart';
 import 'selected_clothing_item.dart';
 import '../services/background_remover.dart';
 import '../services/firestore_service.dart';
 import '../services/image_classifier.dart';
-import '../services/wardrobe_manager.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
   final String imagePath;
@@ -29,7 +29,24 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   bool _isMirrored = false;
   bool _isSaving = false;
   late String _displayImagePath;
+
+  // Controllers & State
   final TextEditingController _brandController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _colorNameController =
+      TextEditingController(); // Added
+
+  String _size = 'M';
+  int _primaryColorValue = 0xFF000000;
+
+  final List<String> _sizes = [
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+  ]; // Copied logic
 
   String _selectedCategory = 'Pants';
   final List<String> _categories = [
@@ -102,6 +119,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   @override
   void dispose() {
     _brandController.dispose();
+    _priceController.dispose();
+    _colorNameController.dispose();
     super.dispose();
   }
 
@@ -142,79 +161,57 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       }
     }
 
-    // 2. Save Locally First (Offline-First Strategy)
-    try {
-      // Save locally using WardrobeManager
-      final savedPath = await WardrobeManager().saveImagePermanent(
-        finalPath,
-        category: _selectedCategory,
-      );
+    // 2. Direct Upload to Firebase (No Local Save)
+    if (!kIsWeb) {
+      try {
+        print(
+          'DEBUG: Saving Item. Brand: ${_brandController.text}, Price: ${_priceController.text}, Size: $_size, Color: $_primaryColorValue',
+        );
 
-      if (mounted) {
-        // Show success immediately for local save?
-        // Or wait for upload? User said "save locally ... and then upload"
-        // If we navigate now, upload happens in background?
-        // Safest is to try upload but catch error and just show warning if fails, but proceed.
-      }
+        // Upload to Firebase Storage
+        final imageUrl = await FirestoreService().uploadImage(File(finalPath));
 
-      // 3. Upload to Firebase (Background / Attempt)
-      if (!kIsWeb) {
-        try {
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            final fileName = p.basename(savedPath); // Use saved path name
-            final storagePath = 'users/${user.uid}/wardrobe/$fileName';
-            print('Attempting to upload to: $storagePath');
+        // Add to Firestore
+        await FirestoreService().addClothingItem({
+          'imageUrl': imageUrl,
+          'category': _selectedCategory,
+          'brand': _brandController.text,
+          'price': double.tryParse(_priceController.text) ?? 0.0,
+          'timesWorn': 0, // Always 0 on creation
+          'size': _size,
+          'primaryColor': _primaryColorValue,
+          'colorName': _colorNameController.text,
+          'dateAdded': FieldValue.serverTimestamp(),
+          // 'isSynced': true, // No longer needed if we don't save local unsynced items
+        });
 
-            final ref = FirebaseStorage.instance.ref().child(storagePath);
-            final file = File(savedPath);
-            final bytes = await file.readAsBytes();
-            print('File size: ${bytes.length} bytes');
+        print('Upload successful: $imageUrl');
 
-            await ref.putData(bytes);
-            final imageUrl = await ref.getDownloadURL();
-
-            await FirestoreService().addClothingItem({
-              'imageUrl': imageUrl,
-              'category': _selectedCategory,
-              'brand': _brandController.text,
-              'dateAdded': FieldValue.serverTimestamp(),
-            });
-          }
-        } catch (uploadError) {
-          print('Upload failed but local save succeeded: $uploadError');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Saved locally, but upload failed: $uploadError'),
-              ),
-            );
-          }
-          // We still proceed because local saveworked
+        if (mounted) {
+          // Navigate to categories
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ClothingCategoriesScreen(),
+            ),
+            (route) => false,
+          );
+        }
+      } catch (uploadError) {
+        print('Upload failed: $uploadError');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Upload failed: $uploadError. Check internet.'),
+            ),
+          );
         }
       }
+    } else {
+      // Web handling if needed, or error
+    }
 
-      if (mounted) {
-        // Navigate to categories (or selected item)
-        // Since we have local list, we can just go back to categories to see it
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ClothingCategoriesScreen(),
-          ),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      print('Full Error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+    if (mounted) {
+      setState(() => _isSaving = false);
     }
   }
 
@@ -326,41 +323,123 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
               const SizedBox(height: 30),
 
-              // ===== BRAND INPUT =====
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0xFFD01FE8)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  controller: _brandController,
-                  decoration: const InputDecoration(
-                    hintText: 'Brand',
-                    border: InputBorder.none,
-                    suffixIcon: Icon(Icons.close, color: Colors.black54),
+              // ===== STATS ROWS (Standardized) =====
+
+              // 1. COLOUR
+              _buildStatRow(
+                label: 'Colour',
+                iconAsset: 'assets/colour-palette.png',
+                content: GestureDetector(
+                  onTap: () => _showColorPicker(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Color(_primaryColorValue),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ===== CATEGORY DROPDOWN =====
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0xFFD01FE8)),
+              // 1B. COLOR NAME
+              _buildStatRow(
+                label: 'Color Name',
+                content: Container(
+                  width: 120,
+                  alignment: Alignment.centerRight,
+                  child: TextField(
+                    controller: _colorNameController,
+                    textAlign: TextAlign.end,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: 'e.g. Black',
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: DropdownButtonHideUnderline(
+              ),
+
+              const SizedBox(height: 16),
+
+              // 2. SIZE
+              _buildStatRow(
+                label: 'Size',
+                content: GestureDetector(
+                  onTap: () => _showSizePicker(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _size,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3. BRAND
+              _buildStatRow(
+                label: 'Brand',
+                content: Container(
+                  width: 120,
+                  alignment: Alignment.centerRight,
+                  child: TextField(
+                    controller: _brandController,
+                    textAlign: TextAlign.end,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: 'Enter brand',
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 4. CATEGORY (Dropdown in row)
+              _buildStatRow(
+                label: 'Category',
+                content: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedCategory,
-                    isExpanded: true,
-                    hint: const Text('Select Category'),
+                    isDense: true,
+                    hint: const Text('Select'),
                     items: _categories.map((String category) {
                       return DropdownMenuItem<String>(
                         value: category,
-                        child: Text(category),
+                        child: Text(
+                          category,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
@@ -373,6 +452,37 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              // 5. PRICE
+              _buildStatRow(
+                label: 'Price',
+                content: Container(
+                  width: 120,
+                  alignment: Alignment.centerRight,
+                  child: TextField(
+                    controller: _priceController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: '0',
+                      suffixText: '€',
+                    ),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              const SizedBox(height: 40),
 
               const SizedBox(height: 40),
 
@@ -400,6 +510,109 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // ===== HELPERS =====
+
+  Widget _buildStatRow({
+    required String label,
+    required Widget content,
+    String? iconAsset,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              if (iconAsset != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Image.asset(iconAsset, width: 20, height: 20),
+                ),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          content,
+        ],
+      ),
+    );
+  }
+
+  void _showColorPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Select Color',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ColorPalettePicker(
+                selectedColor: Color(_primaryColorValue),
+                onColorSelected: (color) {
+                  setState(() {
+                    _primaryColorValue = color.value;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSizePicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _sizes.map((size) {
+              return ListTile(
+                title: Text(
+                  size,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: _size == size
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: _size == size
+                        ? const Color(0xFF9C27B0)
+                        : Colors.black,
+                  ),
+                ),
+                onTap: () {
+                  setState(() => _size = size);
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 
