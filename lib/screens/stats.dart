@@ -3,11 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../widgets/clothes_by_type_pie.dart';
-import '../widgets/least_most_card.dart';
+import '../widgets/clothing_type_pie.dart';
+import '../widgets/least_most_column.dart';
 import '../widgets/MonthlySpendingChart.dart';
 import '../widgets/barchart.dart';
-import '../widgets/info_bar.dart';
+import '../widgets/info_bars.dart';
 import '../widgets/card_decoration.dart';
 
 class StatsScreen extends StatelessWidget {
