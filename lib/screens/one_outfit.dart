@@ -416,23 +416,54 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
   }
 
   Widget _buildClothingItem(String imagePath, {required bool canDelete}) {
-    return GestureDetector(
-      onLongPress: canDelete ? () => _removeItemFromOutfit(imagePath) : null,
-      child: Container(
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9F9F9),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: _buildImage(imagePath),
+    return Stack(
+      children: [
+        GestureDetector(
+          onLongPress: canDelete ? () => _removeItemFromOutfit(imagePath) : null,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F9F9),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: _buildImage(imagePath),
+              ),
+            ),
           ),
         ),
-      ),
+        if (canDelete)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () => _removeItemFromOutfit(imagePath),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
