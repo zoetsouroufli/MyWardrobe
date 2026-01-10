@@ -2,12 +2,152 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart'; // ML Kit
+import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:path/path.dart' as p;
+import 'package:flutter/services.dart' show rootBundle, AssetManifest; // For accessing assets on web
+import 'dart:convert'; // For jsonDecode
+import 'dart:math'; // For random
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  
+  // New Method for Bulk Upload from Assets
+  Future<void> uploadDummyDataFromAssets() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        print("User not logged in");
+        return;
+      }
+
+      print("Starting bulk upload...");
+
+      List<String> imagePaths = [];
+      try {
+        // Try modern AssetManifest API first (Flutter 3.10+)
+        // Note: AssetManifest class might not be available in older SDKs, so we keep the json fallback
+        final manifestContent = await rootBundle.loadString('AssetManifest.json');
+        final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+        imagePaths = manifestMap.keys
+            .where((String key) => key.contains('assets/dummytest/'))
+            .toList();
+      } catch (e) {
+        print("AssetManifest.json load failed: $e");
+        // Fallback: Try AssetManifest.bin.json (sometimes used in web release)
+        try {
+           final manifestContent = await rootBundle.loadString('assets/AssetManifest.bin.json');
+           // Parsing binary json is harder here, skipping for now.
+           print("Attempting to handle AssetManifest.bin.json - Not Implemented");
+        } catch (e2) {
+           print("All manifest loads failed.");
+        }
+      }
+
+      if (imagePaths.isEmpty) {
+        print("No images found in assets/dummytest via Manifest. Using HARDCODED FALLBACK.");
+        imagePaths = _dummyAssets.map((f) => 'assets/dummytest/$f').toList();
+      }
+      
+      if (imagePaths.isEmpty) {
+         print("Fallback failed too. No images.");
+         return;
+      }
+
+      print("Found ${imagePaths.length} images to upload...");
+
+      final random = Random();
+
+      // Initialize Image Labeler (only works on Mobile/Desktop, NOT Web)
+      // Check platform or catch errors
+      dynamic labeler;
+      if (!kIsWeb) {
+        // We utilize reflection or dynamic import if possible, but here we assume the package is imported
+        // We need to import: import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+      }
+
+      int count = 0;
+      for (var assetPath in imagePaths) {
+         final fileName = assetPath.split('/').last;
+
+         // 3. Load asset as bytes (Try multiple path formats for Web compatibility)
+         ByteData byteData;
+         String storagePathName = fileName;
+         
+         try {
+           byteData = await rootBundle.load(assetPath);
+         } catch (e1) {
+            // If "assets/dummytest/..." failed, try "dummytest/..." (strip leading assets/)
+            if (assetPath.startsWith('assets/')) {
+               final tempPath = assetPath.replaceFirst('assets/', '');
+               try {
+                 print("Retrying load with path: $tempPath");
+                 byteData = await rootBundle.load(tempPath);
+                 storagePathName = tempPath.split('/').last;
+               } catch (e2) {
+                 // Try adding it back if it was missing? No, error showed double assets.
+                 print("Failed to load $assetPath or $tempPath. Skipping.");
+                 continue;
+               }
+            } else {
+               print("Failed to load $assetPath. Skipping.");
+               continue;
+            }
+         }
+         
+         final bytes = byteData.buffer.asUint8List();
+
+         // 4. Upload to Storage
+         final storageRef = _storage
+             .ref()
+             .child('users/${user.uid}/wardrobe/dummy_${DateTime.now().millisecondsSinceEpoch}_$storagePathName');
+         
+         final uploadTask = storageRef.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+         final snapshot = await uploadTask;
+         final downloadUrl = await snapshot.ref.getDownloadURL();
+
+         // 5. DETERMINE CATEGORY (RANDOM as requested)
+         final fallbackCategories = ['Pants', 'T-Shirts', 'Hoodies', 'Jackets', 'Socks', 'Shoes', 'Accessories'];
+         String category = fallbackCategories[count % fallbackCategories.length];
+         
+         // Remove ML Kit logic for now to ensure stability on Web
+         /*
+         if (!kIsWeb) {
+             // ... ML Kit Code ...
+         }
+         */
+         
+         // Random metadata for visual flair
+         final brands = ['Nike', 'Adidas', 'Zara', 'H&M', 'Uniqlo', 'Gucci', 'Gap'];
+         final colors = ['Red', 'Blue', 'Black', 'White', 'Green', 'Yellow', 'Grey'];
+         final sizes = ['S', 'M', 'L', 'XL'];
+
+         await _db.collection('users').doc(user.uid).collection('wardrobe').add({
+           'imageUrl': downloadUrl,
+           'category': category,
+           'dateAdded': FieldValue.serverTimestamp(),
+           'monthAdded': random.nextInt(12) + 1, // Random Month 1-12 (New Field)
+           'isInOutfit': false,
+           'timesWorn': random.nextInt(20),
+           'brand': brands[random.nextInt(brands.length)],
+           'price': (10 + random.nextDouble() * 140).roundToDouble(),
+           'size': sizes[random.nextInt(sizes.length)],
+           'colorName': colors[random.nextInt(colors.length)],
+           'primaryColor': 0xFF000000 | random.nextInt(0xFFFFFF),
+           'notes': 'Imported from dummy data',
+         });
+         
+         print("Uploaded $fileName as $category");
+         count++;
+      }
+      print("Batch upload complete! Uploaded $count items.");
+
+    } catch (e) {
+      print("Error uploading dummy data: $e");
+    }
+  }
 
   Future<String> uploadImage(File file) async {
     final user = _auth.currentUser;
@@ -451,4 +591,25 @@ class FirestoreService {
       await batch.commit();
     }
   }
+  // HARDCODED FALLBACK LIST (Generated for Web Compatibility)
+  static const List<String> _dummyAssets = [
+    "00304426422-e1.jpg", "00526403712-e1.jpg", "00653277800-e1.jpg", "00761411898-e1.jpg",
+    "00962400400-e1.jpg", "00962406791-e1.jpg", "00993401801-e1.jpg", "01131860611-e1.jpg",
+    "01437360922-e1.jpg", "01608426505-e1.jpg", "01608436505-e1.jpg", "01732401615-e1.jpg",
+    "01758211710-e1.jpg", "01758654800-e1.jpg", "01856004808-e1.jpg", "01887324600-e1.jpg",
+    "02335059615-e1.jpg", "02335559812-e1.jpg", "02750408760-000-e1.jpg", "03046540401-e1.jpg",
+    "03152570753-e2.jpg", "03166323627-e1.jpg", "03334203717-e1.jpg", "03334302529-e1.jpg",
+    "03443374420-e1.jpg", "03641873669-e1.jpg", "03739024700-e1.jpg", "03739032832-e1.jpg",
+    "03739315802-e1.jpg", "03920008600-e1.jpg", "03920015300-e1.jpg", "03920405922-e1.jpg",
+    "03920765800-e1.jpg", "03992386555-e1.jpg", "03992403555-e1.jpg", "04027400800-e1.jpg",
+    "04048377427-e1.jpg", "04048400822-e1.jpg", "04174026803-e1.jpg", "04174687803-e1.jpg",
+    "04201306800-e2.jpg", "04231309803-e1.jpg", "04387590800-e1.jpg", "04547405555-e2.jpg",
+    "04644002620-e1.jpg", "04695900800-e1.jpg", "05039836104-e1.jpg", "05536001681-e1.jpg",
+    "05644812620-e1.jpg", "05755155515-e1.jpg", "05854810545-e1.jpg", "06224280700-e1.jpg",
+    "06907407800-e1.jpg", "07484303401-e1.jpg", "07677627405-e1.jpg", "08062330407-e1.jpg",
+    "08281289800-e1.jpg", "08975071506-e1.jpg", "09198651712-e1.jpg", "09819671605-e1.jpg",
+    "11000710800-e2.jpg", "11500710022-e2.jpg", "12051620800-e1.jpg", "12105620802-e2.jpg",
+    "12384620500-e1.jpg", "12418620800-e1.jpg", "12422620800-e1.jpg", "12500710107-e2.jpg",
+    "15030610800-e1.jpg", "15213710800-e2.jpg"
+  ];
 }
