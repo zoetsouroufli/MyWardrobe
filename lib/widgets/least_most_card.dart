@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'card_decoration.dart';
 
+import 'package:flutter/foundation.dart'; // kIsWeb
+import 'dart:io';
+
 class LeastMostCard extends StatelessWidget {
   final String title;
   final String item;
@@ -14,6 +17,38 @@ class LeastMostCard extends StatelessWidget {
     required this.times,
     required this.imagePath,
   });
+
+  Widget _buildImage(String path) {
+    if (path.isEmpty) return const SizedBox();
+    
+    // Normalize path just in case
+    // If it's a URL (Firebase Storage)
+    if (path.startsWith('http')) {
+       return Image.network(
+          path,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+       );
+    }
+    // If it's an Asset
+    if (path.startsWith('assets/')) {
+       return Image.asset(
+          path,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
+       );
+    }
+    // If it's a Local File (Mobile)
+    if (!kIsWeb && File(path).existsSync()) {
+       return Image.file(
+          File(path),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.error),
+       );
+    }
+    // Fallback for Web if it's not HTTP/Asset? Or weird path.
+    return const Icon(Icons.image, color: Colors.grey);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +66,8 @@ class LeastMostCard extends StatelessWidget {
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.contain,
-              ),
-            ),
+            clipBehavior: Clip.antiAlias, // Clip inner image
+            child: _buildImage(imagePath),
           ),
 
           const SizedBox(width: 10),

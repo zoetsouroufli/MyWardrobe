@@ -32,8 +32,12 @@ class _SelectedClothingItemScreenState
   late TextEditingController _priceController;
   late int _timesWorn;
   late int _primaryColorValue;
+  // NEW FIELDS
+  late String _category;
+  late int _monthAdded;
 
   final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  final List<String> _categories = ['Pants', 'T-Shirts', 'Hoodies', 'Jackets', 'Socks', 'Shoes', 'Accessories'];
 
   @override
   void initState() {
@@ -47,6 +51,10 @@ class _SelectedClothingItemScreenState
     );
     _timesWorn = (data['timesWorn'] as num?)?.toInt() ?? 0;
     _primaryColorValue = (data['primaryColor'] as int?) ?? 0xFF000000;
+    
+    // Initialize New Fields
+    _category = data['category'] ?? '-';
+    _monthAdded = (data['monthAdded'] as int?) ?? 0;
   }
 
   @override
@@ -157,7 +165,47 @@ class _SelectedClothingItemScreenState
 
               const SizedBox(height: 40),
 
+              const SizedBox(height: 40),
+
               // ===== STATS ROWS =====
+
+              // 0A. CATEGORY
+              _buildStatRow(
+                label: 'Category',
+                content: GestureDetector(
+                  onTap: () => _showCategoryPicker(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _category,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 0B. MONTH ADDED
+              _buildStatRow(
+                label: 'Month Added',
+                content: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _monthName(_monthAdded),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
 
               // 1. COLOUR
               _buildStatRow(
@@ -668,6 +716,45 @@ class _SelectedClothingItemScreenState
     );
   }
 
+  void _showCategoryPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _categories.map((cat) {
+                return ListTile(
+                  title: Text(
+                    cat,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: _category == cat
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _category == cat
+                          ? const Color(0xFF9C27B0)
+                          : Colors.black,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _category = cat;
+                    });
+                    _updateField({'category': cat});
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _confirmDelete(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -717,5 +804,13 @@ class _SelectedClothingItemScreenState
         }
       }
     }
+  }
+
+  String _monthName(int month) {
+    const months = ['-', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (month >= 1 && month <= 12) {
+      return months[month];
+    }
+    return '-';
   }
 }
