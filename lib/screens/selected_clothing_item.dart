@@ -39,7 +39,6 @@ class _SelectedClothingItemScreenState
   void initState() {
     super.initState();
     final data = widget.initialData ?? {};
-    print('DEBUG: SelectedClothingItemScreen initialData: $data');
     _size = data['size'] ?? 'M';
     _brandController = TextEditingController(text: data['brand'] ?? 'Unknown');
     _colorNameController = TextEditingController(text: data['colorName'] ?? '');

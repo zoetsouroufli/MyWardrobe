@@ -14,6 +14,8 @@ import 'selected_clothing_item.dart';
 import '../services/background_remover.dart';
 import '../services/firestore_service.dart';
 import '../services/image_classifier.dart';
+import 'package:palette_generator/palette_generator.dart';
+import '../utils/color_utils.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
   final String imagePath;
@@ -40,6 +42,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   int _primaryColorValue = 0xFF000000;
 
   final List<String> _sizes = [
+    '-', // No Size option
     'XS',
     'S',
     'M',
@@ -63,10 +66,10 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   void initState() {
     super.initState();
     _displayImagePath = widget.imagePath;
-    _autoClassify();
+    // _autoClassify() removed. Manual only.
   }
 
-  Future<void> _autoClassify([String? path]) async {
+  Future<void> _detectCategory([String? path]) async {
     if (kIsWeb) return;
     final targetPath = path ?? widget.imagePath;
 
@@ -85,6 +88,41 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     } catch (e) {
       print('Auto-classify error: $e');
     }
+    // Removed _extractColor call
+  }
+
+  Future<void> _extractColor(String path) async {
+    try {
+      final imageProvider = kIsWeb
+          ? NetworkImage(path)
+          : FileImage(File(path)) as ImageProvider;
+
+      final paletteGenerator = await PaletteGenerator.fromImageProvider(
+        imageProvider,
+        maximumColorCount: 20,
+      );
+
+      final dominantColor = paletteGenerator.dominantColor?.color;
+
+      if (dominantColor != null && mounted) {
+        setState(() {
+          _primaryColorValue = dominantColor.value;
+          _colorNameController.text = ColorUtils.getColorName(dominantColor);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Color detected: ${_colorNameController.text}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: dominantColor,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error extracting color: $e');
+    }
   }
 
   Future<void> _isolateImage() async {
@@ -99,15 +137,14 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         _isIsolating = false;
         if (resultPath != null) {
           _displayImagePath = resultPath;
-          // Trigger auto-classify on the new isolated image
-          _autoClassify(resultPath);
+          // _autoClassify(resultPath); // Removed manual trigger after isolation
         }
       });
 
       String message = kIsWeb
           ? 'Background removal simulated (Web fallback)'
           : (resultPath != widget.imagePath
-                ? 'Subject Isolated! Re-checking category...'
+                ? 'Subject Isolated! Tap the Magic Wand to analyze.' // Message updated
                 : 'No subject found.');
 
       ScaffoldMessenger.of(
@@ -164,10 +201,6 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     // 2. Direct Upload to Firebase (No Local Save)
     if (!kIsWeb) {
       try {
-        print(
-          'DEBUG: Saving Item. Brand: ${_brandController.text}, Price: ${_priceController.text}, Size: $_size, Color: $_primaryColorValue',
-        );
-
         // Upload to Firebase Storage
         final imageUrl = await FirestoreService().uploadImage(File(finalPath));
 
@@ -296,21 +329,28 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                               onPressed: _isolateImage,
                               backgroundColor: Colors.white,
                               child: const Icon(
-                                Icons.auto_fix_high,
+                                Icons.cut,
                                 color: Colors.purple,
                               ),
                             ),
                             const SizedBox(width: 8),
                             FloatingActionButton.small(
-                              heroTag: 'mirror_btn',
-                              onPressed: () {
-                                setState(() {
-                                  _isMirrored = !_isMirrored;
-                                });
-                              },
+                              heroTag: 'cat_btn',
+                              onPressed: () =>
+                                  _detectCategory(_displayImagePath),
                               backgroundColor: Colors.white,
                               child: const Icon(
-                                Icons.flip,
+                                Icons.sell_outlined, // Tag icon
+                                color: Colors.purple,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FloatingActionButton.small(
+                              heroTag: 'color_btn',
+                              onPressed: () => _extractColor(_displayImagePath),
+                              backgroundColor: Colors.white,
+                              child: const Icon(
+                                Icons.palette_outlined, // Palette icon
                                 color: Colors.purple,
                               ),
                             ),
