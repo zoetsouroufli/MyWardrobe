@@ -11,6 +11,7 @@ import '../widgets/info_bars.dart';
 import '../widgets/card_decoration.dart';
 
 import '../widgets/bottom_nav.dart';
+import '../widgets/smooth_page_route.dart';
 import 'home_screen.dart';
 import 'clothing_categories.dart';
 import 'my_outfits.dart';
@@ -42,10 +43,7 @@ class StatsScreen extends StatelessWidget {
           }
            Navigator.pushReplacement(
             context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => screen,
-              transitionDuration: Duration.zero,
-            ),
+            SmoothPageRoute(page: screen),
           );
         },
       ),

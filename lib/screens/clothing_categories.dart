@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/category_dropdown.dart';
 import '../widgets/add_new_item.dart';
+import '../widgets/smooth_page_route.dart';
 // import '../services/firestore_service.dart'; // Unused
 
 import '../services/wardrobe_manager.dart'; // Added import for WardrobeManager
@@ -56,10 +57,7 @@ class _ClothingCategoriesScreenState extends State<ClothingCategoriesScreen> {
           }
           Navigator.pushReplacement(
             context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => screen,
-              transitionDuration: Duration.zero,
-            ),
+            SmoothPageRoute(page: screen),
           );
         },
       ),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/smooth_page_route.dart';
 import 'friend_profile.dart';
 import 'my_outfits.dart';
 import 'stats.dart';
@@ -104,10 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
                 Navigator.pushReplacement(
                   context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => screen,
-                    transitionDuration: Duration.zero,
-                  ),
+                  SmoothPageRoute(page: screen),
                 );
               },
             ),
