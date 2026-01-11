@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import '../widgets/bottom_nav.dart';
-import '../widgets/smooth_page_route.dart';
+import '../widgets/gradient_background.dart';
+import '../widgets/fade_page_route.dart';
 import 'friend_profile.dart';
 import 'my_outfits.dart';
 import 'stats.dart';
@@ -75,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
             // Friend Avatars Grid OR Search Results
             Expanded(
@@ -105,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
                 Navigator.pushReplacement(
                   context,
-                  SmoothPageRoute(page: screen),
+                  FadePageRoute(page: screen),
                 );
               },
             ),
@@ -157,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisSpacing: 16,
               childAspectRatio: 1,
             ),
+            clipBehavior: Clip.none,
             physics: const BouncingScrollPhysics(),
             itemBuilder: (context, index) {
               final doc = docs[index];
@@ -227,47 +229,100 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFriendAvatar(BuildContext context, String friendDocId, String imagePath, String name, String username) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FriendProfileScreen(
-              friendDocId: friendDocId,
-              friendName: name,
-              friendUsername: username,
-              friendPhoto: imagePath,
+    return _FriendAvatarWidget(
+      friendDocId: friendDocId,
+      imagePath: imagePath,
+      name: name,
+      username: username,
+    );
+  }
+}
+
+// Separate StatefulWidget for friend avatar with hover effect
+class _FriendAvatarWidget extends StatefulWidget {
+  final String friendDocId;
+  final String imagePath;
+  final String name;
+  final String username;
+
+  const _FriendAvatarWidget({
+    required this.friendDocId,
+    required this.imagePath,
+    required this.name,
+    required this.username,
+  });
+
+  @override
+  State<_FriendAvatarWidget> createState() => _FriendAvatarWidgetState();
+}
+
+class _FriendAvatarWidgetState extends State<_FriendAvatarWidget> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isHovered = true),
+        onTapUp: (_) => setState(() => _isHovered = false),
+        onTapCancel: () => setState(() => _isHovered = false),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FriendProfileScreen(
+                friendDocId: widget.friendDocId,
+                friendName: widget.name,
+                friendUsername: widget.username,
+                friendPhoto: widget.imagePath,
+              ),
             ),
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.identity()..translate(0.0, _isHovered ? -4.0 : 0.0),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: _isHovered ? const Color(0xFF9C27B0) : Colors.grey.shade300,
+              width: _isHovered ? 3 : 2,
+            ),
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF9C27B0).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
           ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.shade300, width: 2),
-        ),
-        child: ClipOval(
-          child: imagePath.startsWith('http')
-              ? Image.network(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.error),
-                )
-              : Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.person,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
-                ),
+          child: ClipOval(
+            child: widget.imagePath.startsWith('http')
+                ? Image.network(
+                    widget.imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.error),
+                  )
+                : Image.asset(
+                    widget.imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.person,
+                          size: 40,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ),
       ),
     );

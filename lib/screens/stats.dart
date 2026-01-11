@@ -10,8 +10,9 @@ import '../widgets/barchart.dart';
 import '../widgets/info_bars.dart';
 import '../widgets/card_decoration.dart';
 
+import '../widgets/gradient_background.dart';
+import '../widgets/fade_page_route.dart';
 import '../widgets/bottom_nav.dart';
-import '../widgets/smooth_page_route.dart';
 import 'home_screen.dart';
 import 'clothing_categories.dart';
 import 'my_outfits.dart';
@@ -43,7 +44,7 @@ class StatsScreen extends StatelessWidget {
           }
            Navigator.pushReplacement(
             context,
-            SmoothPageRoute(page: screen),
+                  FadePageRoute(page: screen),
           );
         },
       ),
