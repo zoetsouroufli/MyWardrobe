@@ -3,25 +3,45 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
-import '../services/firestore_service.dart';
 import '../utils/preview_styles.dart';
 
-class AddNewOutfitScreen extends StatefulWidget {
-  final String imagePath; // Item to add to the new outfit
+class EditOutfitScreen extends StatefulWidget {
+  final String outfitId;
+  final Map<String, dynamic> outfitData;
 
-  const AddNewOutfitScreen({super.key, required this.imagePath});
+  const EditOutfitScreen({
+    super.key,
+    required this.outfitId,
+    required this.outfitData,
+  });
 
   @override
-  State<AddNewOutfitScreen> createState() => _AddNewOutfitScreenState();
+  State<EditOutfitScreen> createState() => _EditOutfitScreenState();
 }
 
-class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
-  Color _selectedColor = const Color(0xFF9C27B0); // Default purple
-  String _previewStyleType = 'color'; // 'color' or 'gradient'
-  String _selectedGradient = 'sunset';
-  String? _selectedPattern; // null = no pattern
-  final TextEditingController _descController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
+class _EditOutfitScreenState extends State<EditOutfitScreen> {
+  late Color _selectedColor;
+  late String _previewStyleType;
+  late String _selectedGradient;
+  late String? _selectedPattern; // null = no pattern
+  late TextEditingController _descController;
+  late TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize from existing outfit data
+    _selectedColor = Color(widget.outfitData['color'] as int? ?? 0xFF9C27B0);
+    _nameController = TextEditingController(text: widget.outfitData['title'] ?? '');
+    _descController = TextEditingController(text: widget.outfitData['subtitle'] ?? '');
+    
+    // Initialize preview style
+    final previewStyle = widget.outfitData['previewStyle'] as Map<String, dynamic>?;
+    _previewStyleType = previewStyle?['type'] ?? 'color';
+    _selectedGradient = previewStyle?['value'] ?? 'sunset';
+    _selectedPattern = previewStyle?['pattern'] as String?; // Can be null
+  }
 
   @override
   void dispose() {
@@ -46,11 +66,7 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    if (_nameController.text.isEmpty) {
-      // Optional: Show error or assume default
-    }
-
-    final newOutfit = {
+    final updatedOutfit = {
       'color': _selectedColor.value,
       'previewStyle': {
         'type': _previewStyleType,
@@ -58,29 +74,23 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
         'pattern': _selectedPattern, // Can be null
       },
       'title': _nameController.text.isEmpty
-          ? 'New Outfit'
+          ? 'Outfit'
           : _nameController.text,
       'subtitle': _descController.text,
-      'likes': 0,
-      'items': [widget.imagePath],
-      'dateAdded': FieldValue.serverTimestamp(),
     };
 
     await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('outfits')
-        .add(newOutfit);
-
-    // Update item status
-    await FirestoreService().updateItemInOutfitStatus([widget.imagePath], true);
+        .doc(widget.outfitId)
+        .update(updatedOutfit);
 
     if (mounted) {
       Navigator.pop(context);
-      
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('New outfit created!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Outfit updated!')),
+      );
     }
   }
 
@@ -115,7 +125,7 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
 
               const SizedBox(height: 40),
 
-              // Handle bar visual (Purple line)
+              // Handle bar visual
               Container(
                 width: 40,
                 height: 4,
@@ -259,7 +269,7 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
 
               const SizedBox(height: 40),
 
-              // DONE BUTTON (Enter)
+              // SAVE BUTTON
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -272,17 +282,17 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
                     ),
                   ),
                   child: const Text(
-                    'Enter',
+                    'Save Changes',
                     style: TextStyle(
-                      color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
             ],
           ),
         ),

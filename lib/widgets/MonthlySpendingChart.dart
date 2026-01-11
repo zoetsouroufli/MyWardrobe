@@ -55,6 +55,26 @@ class MonthlySpendChart extends StatelessWidget {
                     ),
                   ),
                 ),
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    tooltipBgColor: Colors.white,
+                    tooltipRoundedRadius: 8,
+                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          '€${spot.y.toStringAsFixed(0)}',
+                          const TextStyle(
+                            color: Color(0xFF6C63FF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 borderData: FlBorderData(show: false),
                 minX: 1,
                 maxX: 12,
