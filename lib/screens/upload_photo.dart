@@ -16,6 +16,7 @@ import '../services/firestore_service.dart';
 import '../services/image_classifier.dart';
 import 'package:palette_generator/palette_generator.dart';
 import '../utils/color_utils.dart';
+import '../utils/color_mapping.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
   final String imagePath;
@@ -205,6 +206,12 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         final imageUrl = await FirestoreService().uploadImage(File(finalPath));
 
         // Add to Firestore
+        // Get base color for analytics
+        final colorName = _colorNameController.text.isNotEmpty 
+            ? _colorNameController.text 
+            : ColorMapping.findColorName(Color(_primaryColorValue)) ?? 'Unknown';
+        final baseColor = ColorMapping.getBaseColorName(colorName);
+        
         await FirestoreService().addClothingItem({
           'imageUrl': imageUrl,
           'category': _selectedCategory,
@@ -213,7 +220,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
           'timesWorn': 0, // Always 0 on creation
           'size': _size,
           'primaryColor': _primaryColorValue,
-          'colorName': _colorNameController.text,
+          'colorName': colorName,
+          'baseColor': baseColor, // For analytics grouping
           'dateAdded': FieldValue.serverTimestamp(),
           // 'isSynced': true, // No longer needed if we don't save local unsynced items
         });
@@ -611,9 +619,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                 onColorSelected: (color) {
                   setState(() {
                     _primaryColorValue = color.value;
-                    _colorNameController.text = ColorUtils.getColorName(
-                      color,
-                    ); // Fix: Sync name
+                    _colorNameController.text = ColorMapping.findColorName(color) ?? 'Custom';
                   });
                   Navigator.pop(context);
                 },
