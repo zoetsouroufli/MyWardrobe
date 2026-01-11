@@ -381,7 +381,7 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
 
                 // ===== ADD ITEMS (Horizontal List) =====
                 SizedBox(
-                  height: 140, // Height for item + label
+                  height: 170, // Height for item + label (130px item + 8px spacing + text)
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     scrollDirection: Axis.horizontal,
@@ -421,8 +421,8 @@ class _OneOutfitScreenState extends State<OneOutfitScreen> {
         GestureDetector(
           onLongPress: canDelete ? () => _removeItemFromOutfit(imagePath) : null,
           child: Container(
-            width: 100,
-            height: 100,
+            width: 130,
+            height: 130,
             decoration: BoxDecoration(
               color: const Color(0xFFF9F9F9),
               borderRadius: BorderRadius.circular(16),
