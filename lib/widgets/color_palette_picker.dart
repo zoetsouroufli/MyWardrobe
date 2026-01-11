@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/color_mapping.dart';
 
 class ColorPalettePicker extends StatelessWidget {
   final ValueChanged<Color> onColorSelected;
@@ -10,22 +11,8 @@ class ColorPalettePicker extends StatelessWidget {
     required this.selectedColor,
   });
 
-  static const List<Color> _colors = [
-    Colors.black,
-    Colors.grey,
-    Colors.white,
-    Colors.red,
-    Colors.orange,
-    Colors.yellow,
-    Colors.green,
-    Colors.teal,
-    Colors.blue,
-    Colors.indigo,
-    Colors.purple,
-    Colors.pink,
-    Colors.brown,
-    Color(0xFF9C27B0), // Added our custom purple
-  ];
+  // Use ColorMapping for all available colors
+  static final List<Color> _colors = ColorMapping.getAllColors();
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +33,7 @@ class ColorPalettePicker extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _colors.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
+              crossAxisCount: 8, // Increased to fit more colors
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
             ),

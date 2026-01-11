@@ -87,11 +87,15 @@ class StatsScreen extends StatelessWidget {
                 monthlySpending[monthAdded] = (monthlySpending[monthAdded] ?? 0) + price;
               }
 
-              // Use colorName for aggregation to group properly
-              final rawColorName = data['colorName'] as String?;
-              if (rawColorName != null && rawColorName.trim().isNotEmpty) {
+              // Use baseColor for aggregation to group color shades (Blue, Green, etc.)
+              // Fallback to colorName for backward compatibility with old items
+              final baseColor = data['baseColor'] as String?;
+              final colorName = data['colorName'] as String?;
+              final colorToCount = baseColor ?? colorName;
+              
+              if (colorToCount != null && colorToCount.trim().isNotEmpty) {
                  // Normalize: Trim and Capitalize First Letter, rest lowercase
-                 final trimmed = rawColorName.trim();
+                 final trimmed = colorToCount.trim();
                  final normalizedColor = trimmed.length > 1 
                      ? trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase() 
                      : trimmed.toUpperCase();
@@ -188,19 +192,29 @@ class StatsScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Favourite colour'),
-                        if (favColorName != '-' && _getColor(favColorName) != Colors.transparent)
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: _getColor(favColorName),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                          )
-                        else
-                          Text(favColorName,
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            if (favColorName != '-')
+                              Text(
+                                '$favColorName ($maxCount items)',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              )
+                            else
+                              const Text('-', style: TextStyle(fontWeight: FontWeight.bold)),
+                            if (favColorName != '-' && _getColor(favColorName) != Colors.transparent) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: _getColor(favColorName),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
