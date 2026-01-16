@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import '../widgets/back_button.dart';
 import 'friend_outfit.dart';
+import '../services/sound_service.dart';
+import '../services/notification_service.dart';
 
 class FriendProfileScreen extends StatelessWidget {
   final String friendDocId;
@@ -48,6 +50,24 @@ class FriendProfileScreen extends StatelessWidget {
                     width: 150,
                     fit: BoxFit.contain,
                   ),
+                  // TEST NOTIFICATION BUTTON
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.notifications_active,
+                        color: Color(0xFF9C27B0),
+                      ),
+                      onPressed: () async {
+                        await NotificationService().showTestNotification();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Notification Sent! 🔔'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -75,25 +95,71 @@ class FriendProfileScreen extends StatelessWidget {
                     backgroundColor: Colors.grey,
                   ),
                   const SizedBox(width: 12), // Tighter gap
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        friendName,
-                        style: const TextStyle(
-                          fontSize: 16, // Smaller font
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          friendName,
+                          style: const TextStyle(
+                            fontSize: 16, // Smaller font
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                      Text(
-                        friendUsername,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ), // Smaller font
-                      ),
-                    ],
+                        Text(
+                          friendUsername,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ), // Smaller font
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Follow/Unfollow Button
+                  StreamBuilder<bool>(
+                    stream: FirestoreService().isFollowing(friendDocId),
+                    builder: (context, snapshot) {
+                      final isFollowing = snapshot.data ?? false;
+                      return ElevatedButton(
+                        onPressed: () async {
+                          if (isFollowing) {
+                            await FirestoreService().unfollowUser(friendDocId);
+                          } else {
+                            await FirestoreService().followUser(friendDocId, {
+                              'username': friendUsername,
+                              'name': friendName,
+                              'avatarUrl': friendPhoto,
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isFollowing
+                              ? Colors.grey[300]
+                              : const Color(0xFF9C27B0),
+                          foregroundColor: isFollowing
+                              ? Colors.black
+                              : Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(0, 36), // Compact height
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          isFollowing ? 'Following' : 'Follow',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -193,6 +259,7 @@ class _OutfitCardState extends State<OutfitCard> {
       _isLiked = !_isLiked;
       if (_isLiked) {
         _likes++;
+        SoundService().playPop();
       } else {
         _likes--;
       }

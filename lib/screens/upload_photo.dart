@@ -1,22 +1,20 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
 import 'clothing_categories.dart';
-import 'selected_clothing_item.dart';
 import '../services/background_remover.dart';
 import '../services/firestore_service.dart';
 import '../services/image_classifier.dart';
 import 'package:palette_generator/palette_generator.dart';
 import '../utils/color_utils.dart';
 import '../utils/color_mapping.dart';
+import '../services/sound_service.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
   final String imagePath;
@@ -41,6 +39,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   String _size = 'M';
   int _primaryColorValue = 0xFF000000;
+  int _monthAdded = DateTime.now().month; // Default to current month
 
   final List<String> _sizes = [
     '-', // No Size option
@@ -72,6 +71,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   Future<void> _detectCategory([String? path]) async {
     if (kIsWeb) return;
+    HapticFeedback.selectionClick();
+    SoundService().playClick();
     final targetPath = path ?? widget.imagePath;
 
     // Skip if classifying the same image again unless it's isolated which might give better results
@@ -93,6 +94,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   Future<void> _extractColor(String path) async {
+    HapticFeedback.selectionClick();
+    SoundService().playClick();
     try {
       final imageProvider = kIsWeb
           ? NetworkImage(path)
@@ -128,6 +131,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   Future<void> _isolateImage() async {
     setState(() => _isIsolating = true);
+    HapticFeedback.mediumImpact();
+    SoundService().playClick();
 
     final resultPath = await BackgroundRemover().removeBackground(
       _displayImagePath,
@@ -163,6 +168,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   void _onDiscard() {
+    SoundService().playTrash();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const ClothingCategoriesScreen()),
       (route) => false,
@@ -171,6 +177,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   void _onSave() async {
     setState(() => _isSaving = true);
+    SoundService().playSuccess();
     String finalPath = _displayImagePath;
 
     // 1. Flip if needed
@@ -207,11 +214,12 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
         // Add to Firestore
         // Get base color for analytics
-        final colorName = _colorNameController.text.isNotEmpty 
-            ? _colorNameController.text 
-            : ColorMapping.findColorName(Color(_primaryColorValue)) ?? 'Unknown';
+        final colorName = _colorNameController.text.isNotEmpty
+            ? _colorNameController.text
+            : ColorMapping.findColorName(Color(_primaryColorValue)) ??
+                  'Unknown';
         final baseColor = ColorMapping.getBaseColorName(colorName);
-        
+
         await FirestoreService().addClothingItem({
           'imageUrl': imageUrl,
           'category': _selectedCategory,
@@ -222,6 +230,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
           'primaryColor': _primaryColorValue,
           'colorName': colorName,
           'baseColor': baseColor, // For analytics grouping
+          'monthAdded': _monthAdded, // Added month field
           'dateAdded': FieldValue.serverTimestamp(),
           // 'isSynced': true, // No longer needed if we don't save local unsynced items
         });
@@ -386,6 +395,33 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                       color: Color(_primaryColorValue),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.grey.shade300),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 1B. MONTH ADDED
+              _buildStatRow(
+                label: 'Month',
+                content: GestureDetector(
+                  onTap: () => _showMonthPicker(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _monthName(_monthAdded),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -619,7 +655,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                 onColorSelected: (color) {
                   setState(() {
                     _primaryColorValue = color.value;
-                    _colorNameController.text = ColorMapping.findColorName(color) ?? 'Custom';
+                    _colorNameController.text =
+                        ColorMapping.findColorName(color) ?? 'Custom';
                   });
                   Navigator.pop(context);
                 },
@@ -673,5 +710,63 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     } else {
       return Image.file(File(_displayImagePath), fit: BoxFit.contain);
     }
+  }
+
+  // Helper for Month Name
+  String _monthName(int month) {
+    const months = [
+      '-',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    if (month >= 1 && month <= 12) return months[month];
+    return '-';
+  }
+
+  void _showMonthPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(12, (index) {
+                final month = index + 1;
+                return ListTile(
+                  title: Text(
+                    _monthName(month),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: _monthAdded == month
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _monthAdded == month
+                          ? const Color(0xFF9C27B0)
+                          : Colors.black,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() => _monthAdded = month);
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

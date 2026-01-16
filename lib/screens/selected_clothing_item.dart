@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
 import '../services/firestore_service.dart';
 import '../services/wardrobe_manager.dart';
+import '../../services/sound_service.dart';
 import 'add_new_outfit.dart';
 
 class SelectedClothingItemScreen extends StatefulWidget {
@@ -38,7 +40,15 @@ class _SelectedClothingItemScreenState
   late int _monthAdded;
 
   final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-  final List<String> _categories = ['Pants', 'T-Shirts', 'Hoodies', 'Jackets', 'Socks', 'Shoes', 'Accessories'];
+  final List<String> _categories = [
+    'Pants',
+    'T-Shirts',
+    'Hoodies',
+    'Jackets',
+    'Socks',
+    'Shoes',
+    'Accessories',
+  ];
 
   @override
   void initState() {
@@ -52,7 +62,7 @@ class _SelectedClothingItemScreenState
     );
     _timesWorn = (data['timesWorn'] as num?)?.toInt() ?? 0;
     _primaryColorValue = (data['primaryColor'] as int?) ?? 0xFF000000;
-    
+
     // Initialize New Fields
     _category = data['category'] ?? '-';
     _monthAdded = (data['monthAdded'] as int?) ?? 0;
@@ -139,7 +149,8 @@ class _SelectedClothingItemScreenState
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child:
-                      (widget.imagePath.startsWith('http') || widget.imagePath.startsWith('blob:'))
+                      (widget.imagePath.startsWith('http') ||
+                          widget.imagePath.startsWith('blob:'))
                       ? Image.network(
                           widget.imagePath,
                           fit: BoxFit.contain, // Show full item
@@ -151,26 +162,26 @@ class _SelectedClothingItemScreenState
                               ),
                         )
                       : (widget.imagePath.startsWith('assets/')
-                          ? Image.asset(
-                              widget.imagePath,
-                              fit: BoxFit.contain, // Show full item
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                    Icons.broken_image,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  ),
-                            )
-                          : Image.file(
-                              File(widget.imagePath),
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                    Icons.broken_image,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  ),
-                            )),
+                            ? Image.asset(
+                                widget.imagePath,
+                                fit: BoxFit.contain, // Show full item
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.broken_image,
+                                      size: 50,
+                                      color: Colors.grey,
+                                    ),
+                              )
+                            : Image.file(
+                                File(widget.imagePath),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.broken_image,
+                                      size: 50,
+                                      color: Colors.grey,
+                                    ),
+                              )),
                 ),
               ),
 
@@ -186,7 +197,10 @@ class _SelectedClothingItemScreenState
                 content: GestureDetector(
                   onTap: () => _showCategoryPicker(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(12),
@@ -203,20 +217,25 @@ class _SelectedClothingItemScreenState
               // 0B. MONTH ADDED
               _buildStatRow(
                 label: 'Month Added',
-                content: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _monthName(_monthAdded),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                content: GestureDetector(
+                  onTap: () => _showMonthPicker(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _monthName(_monthAdded),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
 
               // 1. COLOUR
               _buildStatRow(
@@ -363,6 +382,7 @@ class _SelectedClothingItemScreenState
                   children: [
                     _buildCounterButton(Icons.remove, () {
                       if (_timesWorn > 0) {
+                        HapticFeedback.lightImpact();
                         setState(() => _timesWorn--);
                         _updateField({'timesWorn': _timesWorn});
                       }
@@ -376,6 +396,7 @@ class _SelectedClothingItemScreenState
                       ),
                     ),
                     _buildCounterButton(Icons.add, () {
+                      HapticFeedback.lightImpact();
                       setState(() => _timesWorn++);
                       _updateField({'timesWorn': _timesWorn});
                     }),
@@ -395,6 +416,8 @@ class _SelectedClothingItemScreenState
                       'Add to outfit',
                       const Color(0xFF9C27B0), // Unified Purple
                       () {
+                        HapticFeedback.mediumImpact();
+                        SoundService().playPop();
                         _showAddToOutfitModal(context);
                       },
                     ),
@@ -406,6 +429,8 @@ class _SelectedClothingItemScreenState
                       'Add to new outfit',
                       const Color(0xFF9C27B0), // Unified Purple
                       () {
+                        HapticFeedback.mediumImpact();
+                        SoundService().playPop();
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -789,6 +814,8 @@ class _SelectedClothingItemScreenState
     );
 
     if (confirmed == true && mounted) {
+      HapticFeedback.mediumImpact();
+      SoundService().playTrash(); // Added trash sound
       try {
         if (widget.itemId != null) {
           // Cloud Delete
@@ -817,8 +844,60 @@ class _SelectedClothingItemScreenState
     }
   }
 
+  void _showMonthPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(12, (index) {
+                final month = index + 1;
+                return ListTile(
+                  title: Text(
+                    _monthName(month),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: _monthAdded == month
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _monthAdded == month
+                          ? const Color(0xFF9C27B0)
+                          : Colors.black,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() => _monthAdded = month);
+                    _updateField({'monthAdded': month});
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   String _monthName(int month) {
-    const months = ['-', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      '-',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     if (month >= 1 && month <= 12) {
       return months[month];
     }

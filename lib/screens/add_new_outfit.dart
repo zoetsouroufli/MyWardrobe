@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/back_button.dart';
 import '../widgets/color_palette_picker.dart';
 import '../services/firestore_service.dart';
 import '../utils/preview_styles.dart';
+import '../services/sound_service.dart';
 
 class AddNewOutfitScreen extends StatefulWidget {
   final String imagePath; // Item to add to the new outfit
@@ -76,8 +78,10 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
     await FirestoreService().updateItemInOutfitStatus([widget.imagePath], true);
 
     if (mounted) {
+      HapticFeedback.mediumImpact();
+      SoundService().playSuccess();
       Navigator.pop(context);
-      
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('New outfit created!')));
@@ -144,6 +148,7 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
                 ColorPalettePicker(
                   selectedColor: _selectedColor,
                   onColorSelected: (color) {
+                    HapticFeedback.selectionClick();
                     setState(() {
                       _selectedColor = color;
                     });
@@ -189,10 +194,7 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
                 maxLines: 4,
                 decoration: InputDecoration(
                   hintText: 'Add a description for your outfit...',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                  ),
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFF9C27B0)),
@@ -230,10 +232,7 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
                 controller: _nameController,
                 decoration: InputDecoration(
                   hintText: 'Enter outfit name...',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                  ),
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFF9C27B0)),
@@ -293,7 +292,10 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
   Widget _buildStyleTab(String label, String type) {
     final isSelected = _previewStyleType == type;
     return GestureDetector(
-      onTap: () => setState(() => _previewStyleType = type),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _previewStyleType = type);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
@@ -320,7 +322,10 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
       children: PreviewStyles.gradientIds.map((gradientId) {
         final isSelected = _selectedGradient == gradientId;
         return GestureDetector(
-          onTap: () => setState(() => _selectedGradient = gradientId),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _selectedGradient = gradientId);
+          },
           child: Container(
             width: 70,
             height: 70,
@@ -353,8 +358,15 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
 
   Widget _buildPatternPicker() {
     final patterns = [null, 'stripes', 'dots', 'geometric', 'waves', 'chevron'];
-    final patternNames = ['None', 'Stripes', 'Dots', 'Geometric', 'Waves', 'Chevron'];
-    
+    final patternNames = [
+      'None',
+      'Stripes',
+      'Dots',
+      'Geometric',
+      'Waves',
+      'Chevron',
+    ];
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -362,18 +374,19 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
       children: List.generate(patterns.length, (index) {
         final patternId = patterns[index];
         final isSelected = _selectedPattern == patternId;
-        
+
         return GestureDetector(
-          onTap: () => setState(() => _selectedPattern = patternId),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _selectedPattern = patternId);
+          },
           child: Container(
             width: 70,
             height: 90,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF9C27B0)
-                    : Colors.grey[300]!,
+                color: isSelected ? const Color(0xFF9C27B0) : Colors.grey[300]!,
                 width: isSelected ? 3 : 1,
               ),
               boxShadow: [
@@ -394,8 +407,8 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: PreviewStyles.buildPattern(
-                      patternId, 
-                      size: 50, 
+                      patternId,
+                      size: 50,
                       color: _previewColor,
                     ),
                   ),
@@ -404,8 +417,12 @@ class _AddNewOutfitScreenState extends State<AddNewOutfitScreen> {
                   patternNames[index],
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? const Color(0xFF9C27B0) : Colors.grey[700],
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: isSelected
+                        ? const Color(0xFF9C27B0)
+                        : Colors.grey[700],
                   ),
                 ),
               ],
