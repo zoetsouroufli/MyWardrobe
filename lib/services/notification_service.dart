@@ -1,5 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:math';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -64,11 +67,34 @@ class NotificationService {
     );
   }
 
-  // Helper for testing
+  // Helper for testing - fetches a real outfit from Firestore
   Future<void> showTestNotification() async {
+    String outfitTitle = 'your outfit';
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('outfits')
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          // Pick a random outfit
+          final random = Random();
+          final randomDoc = snapshot.docs[random.nextInt(snapshot.docs.length)];
+          final data = randomDoc.data();
+          outfitTitle = data['title'] ?? 'your outfit';
+        }
+      }
+    } catch (e) {
+      print('Error fetching outfit for notification: $e');
+    }
+
     await showLocalNotification(
       title: 'New Like! ❤️',
-      body: 'Someone liked your outfit "Summer Vibes"!',
+      body: 'Someone liked your outfit "$outfitTitle"!',
     );
   }
 }
