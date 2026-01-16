@@ -1,9 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'screens/intro.dart';
-import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/friend_profile.dart';
 import 'screens/friend_outfit.dart';
@@ -20,12 +16,14 @@ import 'screens/camera_screen.dart';
 
 import 'package:camera/camera.dart';
 import 'services/wardrobe_manager.dart';
+import 'services/notification_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await WardrobeManager().init();
+  await NotificationService().init();
   runApp(const MyApp());
 }
 
@@ -42,21 +40,21 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // home: const IntroScreen(),
-      //home: const AuthScreen(),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasData) {
-            return const HomeScreen();
-          }
-          return const AuthScreen();
-        },
-      ),
+      home: const AuthScreen(),
+      // home: StreamBuilder<User?>(
+      //   stream: FirebaseAuth.instance.authStateChanges(),
+      //   builder: (context, snapshot) {
+      //     if (snapshot.connectionState == ConnectionState.waiting) {
+      //       return const Scaffold(
+      //         body: Center(child: CircularProgressIndicator()),
+      //       );
+      //     }
+      //     if (snapshot.hasData) {
+      //       return const HomeScreen();
+      //     }
+      //     return const AuthScreen();
+      //   },
+      // ),
       // home: const FriendProfileScreen(),
       // home: const FriendProfileOutfit(),
       // home: const MyOutfitsScreen(),

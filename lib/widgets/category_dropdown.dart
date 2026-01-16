@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../services/sound_service.dart';
 import '../screens/selected_clothing_item.dart';
 
 class CategoryDropdownTile extends StatelessWidget {
@@ -76,12 +77,13 @@ class CategoryDropdownTile extends StatelessWidget {
 
                   return GestureDetector(
                     onTap: () {
+                      SoundService().playPop();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => SelectedClothingItemScreen(
                             imagePath: imagePath,
-                            itemId: itemId,     // Pass ID
+                            itemId: itemId, // Pass ID
                             initialData: itemData, // Pass Data
                           ),
                         ),
@@ -94,7 +96,9 @@ class CategoryDropdownTile extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: (imagePath.startsWith('http') || imagePath.startsWith('blob:'))
+                        child:
+                            (imagePath.startsWith('http') ||
+                                imagePath.startsWith('blob:'))
                             ? Image.network(
                                 imagePath,
                                 fit: BoxFit.cover,
@@ -106,7 +110,7 @@ class CategoryDropdownTile extends StatelessWidget {
                                     ),
                                   );
                                 },
-                            )
+                              )
                             : (imagePath.startsWith('assets/')
                                   ? Image.asset(
                                       imagePath,
@@ -121,26 +125,32 @@ class CategoryDropdownTile extends StatelessWidget {
                                             );
                                           },
                                     )
-                                  : (kIsWeb 
-                                      ? Image.network(
-                                          imagePath, 
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => 
-                                              const Center(child: Icon(Icons.broken_image, color: Colors.amber)),
-                                        ) 
-                                      : Image.file(
-                                      File(imagePath),
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return const Center(
-                                              child: Icon(
-                                                Icons.error_outline,
-                                                color: Colors.red,
-                                              ),
-                                            );
-                                          },
-                                    ))),
+                                  : (kIsWeb
+                                        ? Image.network(
+                                            imagePath,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const Center(
+                                                      child: Icon(
+                                                        Icons.broken_image,
+                                                        color: Colors.amber,
+                                                      ),
+                                                    ),
+                                          )
+                                        : Image.file(
+                                            File(imagePath),
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return const Center(
+                                                    child: Icon(
+                                                      Icons.error_outline,
+                                                      color: Colors.red,
+                                                    ),
+                                                  );
+                                                },
+                                          ))),
                       ),
                     ),
                   );

@@ -37,17 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // MyWardrobe Logo
-            GestureDetector(
-                onLongPress: () async {
-                    // Secret way to seed data
-                    await FirestoreService().seedDummyUser();
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dummy User Added! Search for "testuser"')));
-                },
-                child: Image.asset(
-                  'assets/MyWardrobe.png',
-                  width: 180,
-                  fit: BoxFit.contain,
-                ),
+            Image.asset(
+              'assets/MyWardrobe.png',
+              width: 180,
+              fit: BoxFit.contain,
             ),
 
             const SizedBox(height: 20),
@@ -59,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: _searchController,
                 onChanged: (value) {
                   setState(() {
-                    _searchQuery = value.trim();
+                    _searchQuery = value.trim().toLowerCase();
                   });
                 },
                 decoration: InputDecoration(
@@ -71,7 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),
@@ -104,10 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   default:
                     return;
                 }
-                Navigator.pushReplacement(
-                  context,
-                  FadePageRoute(page: screen),
-                );
+                Navigator.pushReplacement(context, FadePageRoute(page: screen));
               },
             ),
           ],
@@ -142,7 +135,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Text('No friends yet!'),
                 const SizedBox(height: 16),
-                const Text('Type a username above to find friends.', style: TextStyle(color: Colors.grey)),
+                const Text(
+                  'Type a username above to find friends.',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ],
             ),
           );
@@ -165,9 +161,16 @@ class _HomeScreenState extends State<HomeScreen> {
               final data = doc.data() as Map<String, dynamic>;
               final name = data['name'] ?? 'Unknown';
               final username = data['username'] ?? '';
-              final imagePath = data['avatarUrl'] ?? 'assets/friend1.jpg'; // fallback
+              final imagePath =
+                  data['avatarUrl'] ?? 'assets/friend1.jpg'; // fallback
 
-              return _buildFriendAvatar(context, doc.id, imagePath, name, username);
+              return _buildFriendAvatar(
+                context,
+                doc.id,
+                imagePath,
+                name,
+                username,
+              );
             },
           ),
         );
@@ -184,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-           print(snapshot.error);
+          print(snapshot.error);
           return const Center(child: Text('Error searching users.'));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -193,12 +196,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final docs = snapshot.data?.docs ?? [];
         // Filter out self
-        final filteredDocs = docs.where((doc) => doc.id != FirebaseAuth.instance.currentUser?.uid).toList();
+        final filteredDocs = docs
+            .where((doc) => doc.id != FirebaseAuth.instance.currentUser?.uid)
+            .toList();
 
         if (filteredDocs.isEmpty) {
-          return const Center(
-            child: Text('No user found with that username.'),
-          );
+          return const Center(child: Text('No user found with that username.'));
         }
 
         return Padding(
@@ -218,9 +221,16 @@ class _HomeScreenState extends State<HomeScreen> {
               final username = data['username'] ?? 'Unknown';
               // Use a placeholder if no avatar, or check if they have one
               // For search results, we usually just show username if we don't have avatars
-              final imagePath = 'assets/friend1.jpg'; // Default for now query doesn't guarantee avatar
+              final imagePath =
+                  'assets/friend1.jpg'; // Default for now query doesn't guarantee avatar
 
-              return _buildFriendAvatar(context, doc.id, imagePath, username, username);
+              return _buildFriendAvatar(
+                context,
+                doc.id,
+                imagePath,
+                username,
+                username,
+              );
             },
           ),
         );
@@ -228,7 +238,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFriendAvatar(BuildContext context, String friendDocId, String imagePath, String name, String username) {
+  Widget _buildFriendAvatar(
+    BuildContext context,
+    String friendDocId,
+    String imagePath,
+    String name,
+    String username,
+  ) {
     return _FriendAvatarWidget(
       friendDocId: friendDocId,
       imagePath: imagePath,
@@ -283,11 +299,14 @@ class _FriendAvatarWidgetState extends State<_FriendAvatarWidget> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          transform: Matrix4.identity()..translate(0.0, _isHovered ? -4.0 : 0.0),
+          transform: Matrix4.identity()
+            ..translate(0.0, _isHovered ? -4.0 : 0.0),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: _isHovered ? const Color(0xFF9C27B0) : Colors.grey.shade300,
+              color: _isHovered
+                  ? const Color(0xFF9C27B0)
+                  : Colors.grey.shade300,
               width: _isHovered ? 3 : 2,
             ),
             boxShadow: _isHovered
