@@ -47,3 +47,9 @@
 ## Σύνδεσμοι
 *   **Πηγαίος Κώδικας**: [GitHub Repository](https://github.com/username/MyWardrobe)
 *   **Λήψη APK**: [Release v1.0](#)
+
+
+##screen recording
+παραβλέψαμε μόνο το sign in από τις λειτουργίες
+https://drive.google.com/file/d/1kPCCEDR0J9yjneXtaGPOHoyjnXlXz39p/view?usp=sharing
+σύνδεσμοσ drive
