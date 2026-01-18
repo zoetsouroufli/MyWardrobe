@@ -49,7 +49,6 @@
 *   **Λήψη APK**: [Release APK (Google Drive)](https://drive.google.com/file/d/19ctVIBbpDzP4tWBYuq10dyx4t_uyNjlK/view?usp=drive_link)
 
 
-##screen recording
-παραβλέψαμε μόνο το sign in από τις λειτουργίες
-https://drive.google.com/file/d/1kPCCEDR0J9yjneXtaGPOHoyjnXlXz39p/view?usp=sharing
-σύνδεσμοσ drive
+## Screen Recording
+
+*   **Demo Video**: [Screen Recording (Google Drive)](https://drive.google.com/file/d/1kPCCEDR0J9yjneXtaGPOHoyjnXlXz39p/view?usp=sharing) - Παραβλέψαμε μόνο το Sign In από τις λειτουργίες.
