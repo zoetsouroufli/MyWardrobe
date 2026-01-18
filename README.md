@@ -45,8 +45,8 @@
     *   Camera & ML Kit (για λειτουργίες όρασης υπολογιστή)
 
 ## Σύνδεσμοι
-*   **Πηγαίος Κώδικας**: [GitHub Repository](https://github.com/username/MyWardrobe)
-*   **Λήψη APK**: [Release v1.0](#)
+*   **Πηγαίος Κώδικας**: [Αρχεία Εφαρμογής (Google Drive)](https://drive.google.com/file/d/1LSi7SREJ0q88AquX64QkozhX1NAjAMHk/view?usp=drive_link)
+*   **Λήψη APK**: [Release APK (Google Drive)](https://drive.google.com/file/d/19ctVIBbpDzP4tWBYuq10dyx4t_uyNjlK/view?usp=drive_link)
 
 
 ##screen recording
